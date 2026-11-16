@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Live Scoreboard</title>
+<style>
+:root{--navy:#0b2a4a;--red:#c8202f;--bg:#eef1f5;--line:#d5dbe3;--mut:#5b6877}
+*{box-sizing:border-box}
+body{margin:0;font:16px/1.35 -apple-system,system-ui,Segoe UI,Roboto,sans-serif;background:var(--bg);color:#111}
+header{background:var(--navy);color:#fff;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
+header h1{margin:0;font-size:20px}header small{opacity:.8}
+body.embed header{display:none}
+.bar{display:flex;gap:8px;padding:10px 12px;flex-wrap:wrap;max-width:1400px;margin:0 auto;align-items:center}
+.bar button,.bar select{font:inherit;font-weight:700;border:0;background:#dde3ea;color:var(--navy);padding:8px 12px;border-radius:9px}
+.bar button.on{background:var(--navy);color:#fff}.bar .sp{flex:1}
+#grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px;padding:0 12px 24px;max-width:1100px;margin:0 auto}
+#grid.tiles{grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px;max-width:1400px}
+#grid.cols{grid-template-columns:repeat(var(--n),minmax(300px,1fr));max-width:none;overflow-x:auto}
+#grid.stand{display:block;max-width:900px}
+.m{background:#fff;border-radius:12px;padding:12px;box-shadow:0 1px 2px #0001}
+.col h2{margin:0 0 8px;font-size:16px;color:var(--navy)}.col .m{margin-bottom:12px}
+.top{display:flex;justify-content:space-between;font-size:13px;color:var(--mut);margin-bottom:6px}
+.badge{font-size:11px;font-weight:800;padding:2px 8px;border-radius:99px;background:#dde3ea;color:var(--navy);text-transform:uppercase}
+.badge.live{background:var(--red);color:#fff;animation:p 1.6s infinite}.badge.final{background:var(--navy);color:#fff}
+@keyframes p{50%{opacity:.6}}
+.sc{display:grid;grid-template-columns:1fr auto 1fr;gap:6px;text-align:center;align-items:center}
+.sc .t{font-weight:800}.sc .n{font-size:48px;font-weight:800;line-height:1}.sc .d{color:var(--mut);font-size:26px}
+.ev{display:flex;gap:8px;padding:5px 0;border-top:1px solid var(--line);font-size:14px}.ev:first-of-type{margin-top:8px}
+.ev b{width:34px}.dot{display:inline-block;width:11px;height:15px;border-radius:2px;vertical-align:-3px}
+.pr{margin-top:8px;font-size:12px;font-weight:700;color:var(--red)}
+.tile{padding:8px 10px}.tile summary{list-style:none;cursor:pointer}.tile summary::-webkit-details-marker{display:none}
+.tl{display:grid;grid-template-columns:1fr auto 1fr;gap:6px;align-items:center}.tn{font-weight:700;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.tn.r{text-align:right}.ts{font-size:26px;font-weight:800}
+table.ls{width:100%;border-collapse:collapse;font-size:14px;margin-top:8px}.ls th,.ls td{padding:4px;text-align:center;border:1px solid var(--line)}.ls td:first-child,.ls th:first-child{text-align:left;white-space:nowrap}
+.pool{margin-bottom:16px}.pool h2{margin:0 0 6px;font-size:17px;color:var(--navy)}
+table.st{width:100%;border-collapse:collapse;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 1px 2px #0001}
+.st th{font-size:12px;color:var(--mut);text-transform:uppercase;padding:8px 6px;text-align:center;background:#f6f8fa}.st td{padding:9px 6px;text-align:center;border-top:1px solid var(--line)}
+.st td.tm,.st th.tm{text-align:left;font-weight:700}.st td.pt{font-weight:800}.st .lv{color:var(--red);font-size:11px;margin-left:4px}
+.note{font-size:12px;color:var(--mut);margin-top:6px}
+#err{display:none;background:#fff4d6;padding:8px 16px;font-size:13px;text-align:center}
+.empty{padding:40px;text-align:center;color:var(--mut)}
+</style>
+</head>
+<body>
+<header><h1 id="ttl">Live Scoreboard</h1><small id="upd"></small></header>
+<div id="err"></div>
+<div class="bar" id="bar"></div>
+<div id="grid"></div>
+<script>
+/* ---- Config: URL params win (?url=…&key=…&t=CODE&embed=1&view=standings&pool=Pool%20A&pitch=2&layout=tiles),
+   then the values below, then same-origin localStorage from the Scorekeeper (handy for testing on one site). ---- */
+const CONFIG={url:'',key:'',tournament:'',title:''};
+const q=new URLSearchParams(location.search);
+let LSET={};try{LSET=(JSON.parse(localStorage.getItem('usfhl.v1'))||{}).settings||{}}catch(e){}
+const url=(q.get('url')||CONFIG.url||LSET.sbUrl||'').replace(/\/+$/,''),key=q.get('key')||CONFIG.key||LSET.sbKey||'',code=q.get('t')||CONFIG.tournament||LSET.tournament||'';
+if(q.get('embed'))document.body.classList.add('embed');
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const CARD={green:'#1b8a3a',yellow:'#f2c200',red:'#c8202f'},CARDW={green:0,yellow:1,red:3};
+/* default standings rules per sport — overridden by the tournament's saved rules */
+const G3={win:3,draw:1,loss:0,tb:['h2h','gd','gf']},W1={win:1,draw:0,loss:0,tb:['h2h','gd','gf']},BB={win:1,draw:0.5,loss:0,tb:['h2h','ga','gd']};
+const DEF={fieldhockey:G3,soccer:{...G3,tb:['h2h','gd','gf','cards']},lacrosse_w:W1,lacrosse_m:W1,baseball:BB,softball:BB};
+let CONF={},matches=[],filter='all',pitch=q.get('pitch')||'',view=q.get('view')==='standings'?'standings':'scores',layout=q.get('layout')||'',poolF=q.get('pool')||'';
+let since=null,store=new Map(),polls=0,openSet=new Set(),title=q.get('title')||CONFIG.title||'';
+const isLS=m=>m.model==='linescore';
+const score=(m,s)=>isLS(m)?(m.ls[s]||[]).reduce((a,b)=>a+(+b||0),0):(m.goals||[]).filter(g=>g.side===s).length;
+const mins=m=>Math.floor((m.clock.base+(m.clock.running?(Date.now()-m.clock.startedAt)/1000:0))/60)+1;
+function setTitle(n){document.getElementById('ttl').textContent=title||(n||code)&&((n||code)+' · Live Scoreboard')||'Live Scoreboard';document.title=document.getElementById('ttl').textContent}
+setTitle();
+async function rpc(name,body){const r=await fetch(url+'/rest/v1/rpc/'+name,{method:'POST',headers:{apikey:key,Authorization:'Bearer '+key,'Content-Type':'application/json'},body:JSON.stringify(body)});if(!r.ok)throw new Error('HTTP '+r.status);return r.json()}
+async function load(){
+  const err=document.getElementById('err');let changed=true;
+  try{
+    if(url&&key&&code){
+      const full=!since||(++polls%15===0);
+      if(full){try{const t=await rpc('get_tournament',{p_code:code});if(t){CONF=t.config||{};setTitle(t.name)}}catch(e){}}
+      const rows=await rpc('get_board',{p_code:code,p_since:full?null:since});
+      if(full){store=new Map();since=null}
+      rows.forEach(x=>{store.set(x.id,x.board);if(!since||x.updated_at>since)since=x.updated_at});
+      matches=[...store.values()];changed=full||rows.length>0;err.style.display='none';
+    }else{
+      const s=JSON.parse(localStorage.getItem('usfhl.v1')||'{}');matches=Object.values(s.matches||{});CONF={rules:(s.settings||{}).rules||{}};
+      err.style.display='block';err.textContent='Demo mode: showing matches stored in this browser. Add ?url=…&key=…&t=… to read a tournament.';
+    }
+    document.getElementById('upd').textContent='Updated '+new Date().toLocaleTimeString();
+  }catch(e){err.style.display='block';err.textContent='Connection problem — showing last known scores. ('+e.message+')'}
+  if(changed)draw();
+}
+function tg(id,o){o?openSet.add(id):openSet.delete(id)}
+
+/* ---------- scores ---------- */
+function evHTML(m){
+  if(isLS(m)){
+    const n=Math.max(m.innings||7,m.ls.home.length,m.ls.away.length);
+    const row=s=>`<tr><td><b>${esc(m[s].name)}</b></td>${Array.from({length:n},(_,i)=>`<td>${m.ls[s][i]==null?'':m.ls[s][i]}</td>`).join('')}<td><b>${score(m,s)}</b></td><td>${m.he?m.he[s].h:''}</td><td>${m.he?m.he[s].e:''}</td></tr>`;
+    return `<table class="ls"><tr><th></th>${Array.from({length:n},(_,i)=>`<th>${i+1}</th>`).join('')}<th>R</th><th>H</th><th>E</th></tr>${row('away')}${row('home')}</table>`;
+  }
+  return [...(m.goals||[]).map(g=>({k:'g',e:g})),...(m.cards||[]).map(c=>({k:'c',e:c}))].sort((a,b)=>a.e.min-b.e.min||a.e.ts-b.e.ts).map(({k,e})=>{
+    const nm=e.num?'#'+esc(e.num)+' '+esc(e.name):'';const tm=`<span style="color:var(--mut)">${esc(m[e.side].name)}</span>`;
+    return k==='g'?`<div class="ev"><b>${e.min}'</b><span>⚽ ${esc(e.type)} · ${nm}${e.anum?` <span style="color:var(--mut)">(A: #${esc(e.anum)} ${esc(e.aname||'')})</span>`:''} ${tm}</span></div>`
+     :`<div class="ev"><b>${e.min}'</b><span><span class="dot" style="background:${esc(e.col||CARD[e.type]||'#888')}"></span> ${e.lbl&&!CARD[e.type]?'<b style="width:auto">'+esc(e.lbl)+'</b> · ':''}${e.who==='official'?'Team official':nm} ${tm}</span></div>`}).join('');
+}
+function status(m){return m.status==='live'?(isLS(m)?`${m.inn.half==='top'?'Top':'Bot'} ${m.inn.n} `:(m.clock.running?mins(m)+"' ":'Paused '))+'':''}
+const soLine=m=>m.soRes?`<div style="font-size:13px;font-weight:700;color:var(--navy);text-align:center;margin-top:4px">Shootout ${m.soRes.h}–${m.soRes.a}${m.soRes.done?' · '+esc(m[m.soRes.winner].name)+' win':' · in progress'}</div>`:'';
+function card(m){
+  const prot=m.signoff&&(m.signoff.home.protest||m.signoff.away.protest);
+  return `<div class="m"><div class="top"><span>${m.pitch?(isLS(m)?'Field ':'Pitch ')+esc(m.pitch)+' · ':''}${esc(m.time)}${m.pool?' · '+esc(m.pool):''}${m.stage==='knockout'?' · Knockout':''}</span>
+   <span>${esc(status(m))}<span class="badge ${m.status}">${m.status}</span></span></div>
+   <div class="sc"><div class="t">${esc(m.home.name)}</div><div></div><div class="t">${esc(m.away.name)}</div><div class="n">${score(m,'home')}</div><div class="d">–</div><div class="n">${score(m,'away')}</div></div>${soLine(m)}
+   ${evHTML(m)}${prot?'<div class="pr">⚑ Signed under protest</div>':''}</div>`}
+function tile(m){const prot=m.signoff&&(m.signoff.home.protest||m.signoff.away.protest);
+  return `<details class="m tile" ${openSet.has(m.id)?'open':''} ontoggle="tg('${m.id}',this.open)"><summary>
+   <div class="top"><span><b>${m.pitch?esc(m.pitch):'—'}</b> · ${esc(m.time)}${m.pool?' · '+esc(m.pool):''}</span><span>${esc(status(m))}<span class="badge ${m.status}">${m.status}</span></span></div>
+   <div class="tl"><span class="tn">${esc(m.home.name)}</span><span class="ts">${score(m,'home')}–${score(m,'away')}</span><span class="tn r">${esc(m.away.name)}</span></div>${soLine(m)}${prot?'<div class="pr">⚑ protest</div>':''}</summary>${evHTML(m)||'<div class="ev" style="color:var(--mut)">No goals or cards yet</div>'}</details>`}
+
+/* ---------- standings ---------- */
+function rulesFor(sport){const d=DEF[sport]||G3,o=(CONF.rules||{})[sport]||{};return{win:o.win??d.win,draw:o.draw??d.draw,loss:o.loss??d.loss,tb:(o.tb&&o.tb.length)?o.tb:d.tb}}
+function standings(list,rules){
+  const T={};const mk=(t)=>{const id=t.teamId||t.name;return T[id]??={id,name:t.name,gp:0,w:0,d:0,l:0,gf:0,ga:0,pts:0,cards:0,live:false,tied:false}};
+  const played=[];
+  for(const m of list){const h=mk(m.home),a=mk(m.away);if(m.status==='scheduled')continue;played.push(m);
+    const hs=score(m,'home'),as=score(m,'away');
+    for(const [t,f,g,side] of [[h,hs,as,'home'],[a,as,hs,'away']]){
+      t.gp++;t.gf+=f;t.ga+=g;
+      if(f>g){t.w++;t.pts+=rules.win}else if(f<g){t.l++;t.pts+=rules.loss}else{t.d++;t.pts+=rules.draw}
+      if(m.status==='live')t.live=true;
+      (m.cards||[]).filter(c=>c.side===side).forEach(c=>{t.cards+=(c.w??CARDW[c.type]??0)});
+    }}
+  const teams=Object.values(T);teams.forEach(t=>t.gd=t.gf-t.ga);
+  const pid=m=>[m.home.teamId||m.home.name,m.away.teamId||m.away.name];
+  const h2h=(t,grp)=>{const ids=new Set(grp.map(x=>x.id));let p=0;
+    for(const m of played){const [hi,ai]=pid(m);if(!ids.has(hi)||!ids.has(ai)||(hi!==t.id&&ai!==t.id))continue;
+      const me=hi===t.id?'home':'away',you=me==='home'?'away':'home',f=score(m,me),g=score(m,you);p+=f>g?rules.win:f<g?rules.loss:rules.draw}return p};
+  const val=(t,k,grp)=>k==='h2h'?h2h(t,grp):k==='gd'?t.gd:k==='gf'?t.gf:k==='ga'?-t.ga:k==='cards'?-t.cards:k==='wins'?t.w:0;
+  const split=(group,fn)=>{const mp=new Map();group.forEach(t=>{const k=fn(t);if(!mp.has(k))mp.set(k,[]);mp.get(k).push(t)});return[...mp.entries()].sort((a,b)=>b[0]-a[0]).map(e=>e[1])};
+  const refine=(group,i)=>{if(group.length<2||i>=rules.tb.length){if(group.length>1)group.forEach(t=>t.tied=true);return group}
+    return split(group,t=>val(t,rules.tb[i],group)).flatMap(g=>g.length>1?refine(g,i+1):g)};
+  return split(teams,t=>t.pts).flatMap(g=>g.length>1?refine(g,0):g);
+}
+function standingsHTML(){
+  const groups={};matches.filter(m=>m.pool&&m.stage!=='knockout'&&(!poolF||m.pool===poolF)).forEach(m=>{(groups[(m.sport||'fieldhockey')+'|'+m.pool]??=[]).push(m)});
+  const keys=Object.keys(groups).sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));
+  if(!keys.length)return'<div class="empty">No pools yet. Standings appear once matches are tagged with a pool.</div>';
+  const multi=new Set(keys.map(k=>k.split('|')[0])).size>1;let anyLive=false,anyTie=false;
+  const html=keys.map(k=>{
+    const list=groups[k],sport=k.split('|')[0],ls=isLS(list[0]),rules=rulesFor(sport),rows=standings(list,rules),hasD=rows.some(t=>t.d);
+    const name=(multi?(list[0].sportName||sport)+' · ':'')+k.split('|').slice(1).join('|');
+    const head=ls?`<th>#</th><th class="tm">Team</th><th>GP</th><th>W</th><th>L</th>${hasD?'<th>T</th>':''}<th>RS</th><th>RA</th><th>RD</th><th>PCT</th>`
+                  :`<th>#</th><th class="tm">Team</th><th>GP</th><th>W</th><th>D</th><th>L</th><th>GF</th><th>GA</th><th>GD</th><th>Pts</th>`;
+    const body=rows.map((t,i)=>{if(t.live)anyLive=true;if(t.tied)anyTie=true;
+      const nm=`<td class="tm">${esc(t.name)}${t.live?'<span class="lv">● live</span>':''}</td>`,rk=`<td>${i+1}${t.tied?'*':''}</td>`;
+      return ls?`<tr>${rk}${nm}<td>${t.gp}</td><td>${t.w}</td><td>${t.l}</td>${hasD?`<td>${t.d}</td>`:''}<td>${t.gf}</td><td>${t.ga}</td><td>${t.gd>0?'+':''}${t.gd}</td><td class="pt">${t.gp?(t.pts/t.gp).toFixed(3).replace(/^0/,''):'—'}</td></tr>`
+               :`<tr>${rk}${nm}<td>${t.gp}</td><td>${t.w}</td><td>${t.d}</td><td>${t.l}</td><td>${t.gf}</td><td>${t.ga}</td><td>${t.gd>0?'+':''}${t.gd}</td><td class="pt">${t.pts}</td></tr>`}).join('');
+    return `<div class="pool"><h2>${esc(name)}</h2><table class="st"><tr>${head}</tr>${body}</table></div>`}).join('');
+  return html+`<div class="note">${anyLive?'● Standings include games in progress. ':''}${anyTie?'* Tied on all tie-breakers. ':''}Tie-breakers applied in order; head-to-head uses only games between the tied teams.</div>`;
+}
+
+/* ---------- draw ---------- */
+function draw(){
+  const g=document.getElementById('grid'),bar=document.getElementById('bar');
+  const pitches=[...new Set(matches.map(m=>m.pitch).filter(Boolean))].sort((a,b)=>String(a).localeCompare(String(b),undefined,{numeric:true}));
+  const tabs=`<button class="${view==='scores'?'on':''}" onclick="view='scores';draw()">Scores</button><button class="${view==='standings'?'on':''}" onclick="view='standings';draw()">Standings</button>`;
+  if(view==='standings'){bar.innerHTML=tabs;g.className='stand';g.style.removeProperty('--n');g.innerHTML=standingsHTML();return}
+  const eff=layout||(pitches.length>4?'tiles':'pitch');
+  bar.innerHTML=tabs+'<span class="sp"></span>'+['all','live','final','scheduled'].map(f=>`<button class="${filter===f?'on':''}" onclick="filter='${f}';draw()">${f[0].toUpperCase()+f.slice(1)}</button>`).join('')+
+    [['pitch','By pitch'],['tiles','Tiles'],['list','List']].map(([l,t])=>`<button class="${eff===l?'on':''}" onclick="layout='${l}';draw()">${t}</button>`).join('')+
+    `<select onchange="pitch=this.value;draw()"><option value="">All pitches</option>${pitches.map(p=>`<option ${pitch===p?'selected':''} value="${esc(p)}">Pitch ${esc(p)}</option>`).join('')}</select>`;
+  const order={live:0,scheduled:1,final:2};
+  const list=matches.filter(m=>(filter==='all'||m.status===filter)&&(!pitch||m.pitch===pitch))
+    .sort((a,b)=>(order[a.status]-order[b.status])||((a.date||'')+(a.time||'')).localeCompare((b.date||'')+(b.time||'')));
+  if(!list.length){g.className='';g.innerHTML='<div class="empty">No matches to show yet.</div>';return}
+  if(eff==='tiles'){g.className='tiles';g.style.removeProperty('--n');g.innerHTML=list.map(tile).join('')}
+  else if(eff==='pitch'){
+    const ps=[...new Set(list.map(m=>m.pitch||'—'))].sort((a,b)=>String(a).localeCompare(String(b),undefined,{numeric:true}));
+    g.className='cols';g.style.setProperty('--n',ps.length);
+    g.innerHTML=ps.map(p=>`<div class="col"><h2>${p==='—'?'No pitch':'Pitch '+esc(p)}</h2>${list.filter(m=>(m.pitch||'—')===p).map(card).join('')}</div>`).join('');
+  }else{g.className='';g.style.removeProperty('--n');g.innerHTML=list.map(card).join('')}
+}
+load();setInterval(load,4000);setInterval(draw,15000);
+</script>
+</body>
+</html>

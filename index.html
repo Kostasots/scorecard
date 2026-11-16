@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Scorekeeper"><title>Scorekeeper</title>
+<style>
+:root{--navy:#0b2a4a;--red:#c8202f;--ok:#1b8a3a;--bg:#eef1f5;--card:#fff;--line:#d5dbe3;--mut:#5b6877;--yel:#f2c200}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;font:16px/1.35 -apple-system,system-ui,Segoe UI,Roboto,sans-serif;background:var(--bg);color:#111;padding-bottom:calc(64px + env(safe-area-inset-bottom))}
+header{background:var(--navy);color:#fff;padding:calc(10px + env(safe-area-inset-top)) 14px 10px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:5}
+header h1{font-size:17px;margin:0;letter-spacing:.3px}
+#pill{font-size:12px;padding:3px 9px;border-radius:99px;background:#ffffff26}
+#pill.ok{background:#1b8a3a}#pill.bad{background:#c8202f}#pill.wait{background:#b8860b}
+main{padding:12px;max-width:760px;margin:0 auto}
+nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--line);display:flex;padding-bottom:env(safe-area-inset-bottom);z-index:5}
+nav button{flex:1;border:0;background:none;padding:12px 4px;font-size:13px;color:var(--mut);font-weight:600}
+nav button.on{color:var(--navy);box-shadow:inset 0 3px 0 var(--red)}
+nav button:disabled{opacity:.35}
+.card{background:var(--card);border-radius:12px;padding:12px;margin-bottom:12px;box-shadow:0 1px 2px #0001}
+h2{font-size:15px;margin:0 0 8px;color:var(--navy);text-transform:uppercase;letter-spacing:.5px}
+h3{font-size:14px;margin:10px 0 6px}
+label{display:block;font-size:12px;color:var(--mut);margin:8px 0 3px;font-weight:600}
+input,select,textarea{width:100%;font:inherit;padding:10px;border:1px solid var(--line);border-radius:8px;background:#fff}
+textarea{min-height:120px}
+.row{display:flex;gap:8px}.row>*{flex:1}
+button.b{font:inherit;font-weight:700;border:0;border-radius:10px;padding:12px 14px;background:var(--navy);color:#fff}
+button.b.red{background:var(--red)}button.b.ok{background:var(--ok)}button.b.ghost{background:#e6ebf1;color:var(--navy)}
+button.b.big{padding:18px 10px;font-size:18px}
+button.b:disabled{opacity:.4}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:2px solid var(--line);background:#fff;border-radius:10px;padding:8px 10px;font:inherit;font-weight:600;min-width:48px;text-align:center}
+.chip small{display:block;font-weight:400;font-size:11px;color:var(--mut);max-width:84px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chip.on{border-color:var(--navy);background:var(--navy);color:#fff}.chip.on small{color:#cfd9e6}
+.seg{display:flex;gap:6px;overflow-x:auto;margin-bottom:12px}
+.seg button{flex:1;white-space:nowrap;border:0;background:#dde3ea;padding:10px;border-radius:9px;font-weight:700;color:var(--navy)}
+.seg button.on{background:var(--navy);color:#fff}
+.score{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;text-align:center;gap:6px}
+.score .t{font-weight:800;font-size:15px}.score .n{font-size:54px;font-weight:800;line-height:1}
+.score .dash{font-size:30px;color:var(--mut)}
+#clk{font:800 38px/1 ui-monospace,Menlo,monospace;text-align:center;margin:6px 0}
+.sub{color:var(--mut);font-size:13px;text-align:center}
+.ev{display:flex;gap:8px;align-items:center;padding:9px 0;border-top:1px solid var(--line)}
+.ev:first-child{border-top:0}.ev .m{font-weight:800;width:38px}.ev .x{margin-left:auto;border:0;background:none;font-size:18px;color:var(--mut);padding:4px 8px}
+.dot{display:inline-block;width:14px;height:18px;border-radius:3px;vertical-align:-3px}
+.badge{font-size:11px;font-weight:800;padding:2px 8px;border-radius:99px;background:#dde3ea;color:var(--navy);text-transform:uppercase}
+.badge.live{background:var(--red);color:#fff}.badge.final{background:var(--navy);color:#fff}
+.li{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-top:1px solid var(--line)}.li:first-child{border-top:0}
+table{width:100%;border-collapse:collapse;font-size:14px}th,td{padding:6px 4px;text-align:center;border-top:1px solid var(--line)}th{font-size:11px;color:var(--mut);text-transform:uppercase}td:first-child,th:first-child{text-align:left}
+#modal{position:fixed;inset:0;background:#0009;display:none;align-items:flex-end;justify-content:center;z-index:20}
+#modal.on{display:flex}
+#modal .sheet{background:#fff;width:100%;max-width:640px;max-height:92vh;overflow:auto;border-radius:16px 16px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom))}
+#toast{position:fixed;left:50%;bottom:80px;transform:translateX(-50%);background:#111;color:#fff;padding:10px 16px;border-radius:99px;font-size:14px;display:none;z-index:30}
+.chk{display:flex;gap:10px;align-items:flex-start;padding:10px;border:2px solid var(--line);border-radius:10px;margin:6px 0}
+.chk input{width:26px;height:26px;flex:none}
+.warn{background:#fff4d6;border:1px solid #e8c766;border-radius:10px;padding:8px 10px;font-size:13px;margin-bottom:10px}
+.ls{width:100%;border-collapse:collapse;font-size:15px}.ls th,.ls td{padding:8px 6px;min-width:30px;text-align:center;border:1px solid var(--line)}
+.ls td:first-child,.ls th:first-child{text-align:left;min-width:80px;position:sticky;left:0;background:#fff}.ls td.cur{background:#fff4d6;outline:2px solid #e8c766}
+.step{display:flex;align-items:center;gap:8px}.step button{width:40px;height:40px;border:0;border-radius:8px;background:#e6ebf1;font-size:20px;font-weight:800;color:var(--navy)}
+@media print{header,nav,.noprint{display:none!important}body{background:#fff}}
+</style>
+</head>
+<body>
+<header><h1 id="org">Scorekeeper</h1><span id="pill">local only</span></header>
+<main id="app"></main>
+<nav id="nav"></nav>
+<div id="modal"></div>
+<div id="toast"></div>
+<script>
+"use strict";
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const slug=s=>String(s||'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+const uid=()=>Math.random().toString(36).slice(2,8)+Date.now().toString(36).slice(-4);
+const LS='usfhl.v1';
+/* ---------- sport profiles: add a sport by adding an entry here ---------- */
+const CARDS_GYR=[{k:'green',l:'Green',s:'G',c:'#1b8a3a',w:0},{k:'yellow',l:'Yellow',s:'Y',c:'#f2c200',w:1},{k:'red',l:'Red',s:'R',c:'#c8202f',w:3}];
+const HALVES=[['1','1st half'],['2','2nd half'],['OT','Overtime']];
+const SPORTS={
+ fieldhockey:{name:'Field hockey',model:'goals',shootout:true,types:[['FG','Field goal'],['PC','Penalty corner'],['PS','Penalty stroke']],assist:false,cards:CARDS_GYR,
+   periods:[['1','Period 1'],['2','Period 2'],['3','Period 3'],['4','Period 4'],['OT','Overtime'],['SO','Shootout']],starters:11,rules:{win:3,draw:1,loss:0,tb:['h2h','gd','gf']}},
+ soccer:{name:'Soccer',model:'goals',shootout:true,types:[['OP','Open play'],['PK','Penalty kick'],['FK','Free kick'],['OG','Own goal']],assist:true,cards:[CARDS_GYR[1],CARDS_GYR[2]],
+   periods:[['1','1st half'],['2','2nd half'],['ET1','Extra time 1'],['ET2','Extra time 2'],['PK','Shootout']],starters:11,rules:{win:3,draw:1,loss:0,tb:['h2h','gd','gf','cards']}},
+ lacrosse_w:{name:"Lacrosse (women's)",model:'goals',types:[['G','Goal'],['FP','Free position']],assist:true,cards:CARDS_GYR,periods:HALVES,starters:12,rules:{win:1,draw:0,loss:0,tb:['h2h','gd','gf']}},
+ lacrosse_m:{name:"Lacrosse (men's)",model:'goals',types:[['EV','Even strength'],['MU','Man-up'],['MD','Man-down']],assist:true,
+   cards:[{k:'t30',l:'Technical 30s',s:'30s',c:'#e08a00',w:0},{k:'p1',l:'Personal 1:00',s:'1:00',c:'#d9534f',w:1},{k:'p2',l:'Personal 2:00',s:'2:00',c:'#c8202f',w:2},{k:'p3',l:'Personal 3:00',s:'3:00',c:'#8b1a24',w:3},{k:'ej',l:'Ejection',s:'EJ',c:'#111',w:5}],
+   periods:[['1','Q1'],['2','Q2'],['3','Q3'],['4','Q4'],['OT','Overtime']],starters:10,rules:{win:1,draw:0,loss:0,tb:['h2h','gd','gf']}},
+ baseball:{name:'Baseball',model:'linescore',innings:9,rules:{win:1,draw:0.5,loss:0,tb:['h2h','ga','gd']}},
+ softball:{name:'Softball',model:'linescore',innings:7,rules:{win:1,draw:0.5,loss:0,tb:['h2h','ga','gd']}}
+};
+const other=s=>s==='home'?'away':'home';
+const SP=m=>SPORTS[m.sport]||SPORTS.fieldhockey;
+const isLS=m=>m.model==='linescore';
+const ALLCARDS={};Object.values(SPORTS).forEach(x=>(x.cards||[]).forEach(c=>ALLCARDS[c.k]=c));
+const cdef=(m,k)=>(SP(m).cards||[]).find(c=>c.k===k)||ALLCARDS[k]||{k,l:k,s:k,c:'#888',w:0};
+const hash=t=>{let h=5381;for(const c of String(t))h=((h<<5)+h+c.charCodeAt(0))>>>0;return h.toString(36)};const SIDES=['home','away'];
+
+function blank(){return{settings:{tournament:'',pin:'',sbUrl:'',sbKey:''},teams:{},matches:{},currentId:null,view:'matches',tab:'setup',teamView:null}}
+let S=(()=>{try{const s=JSON.parse(localStorage.getItem(LS));if(s&&s.matches)return Object.assign(blank(),s)}catch(e){}return blank()})();
+function save(){try{localStorage.setItem(LS,JSON.stringify(S))}catch(e){}}
+const cur=()=>S.matches[S.currentId];
+function toast(t){const e=$('#toast');e.textContent=t;e.style.display='block';clearTimeout(toast.t);toast.t=setTimeout(()=>e.style.display='none',2200)}
+function touch(m){m.updated=Date.now();save();queueSync(m)}
+
+/* ---------- model ---------- */
+function newMatch(o){
+  const sk=SPORTS[o.sport]?o.sport:(SPORTS[S.settings.sport]?S.settings.sport:'fieldhockey'),sp=SPORTS[sk];
+  const m={id:o.id||uid(),updated:Date.now(),sport:sk,sportName:sp.name,model:sp.model,pool:o.pool||'',stage:o.stage==='knockout'?'knockout':'pool',soN:+S.settings.soN||5,so:null,soRes:null,status:'scheduled',date:o.date||'',time:o.time||'',pitch:o.pitch||'',game:'',tech:'',umpires:['',''],
+    home:{name:o.home||'',teamId:slug(o.home)},away:{name:o.away||'',teamId:slug(o.away)},
+    roster:{home:[],away:[]},lineup:{home:[],away:[]},
+    clock:{period:'1',running:false,base:0,startedAt:null},goals:[],cards:[],
+    signoff:{home:{ok:false,initials:'',manager:'',protest:false},away:{ok:false,initials:'',manager:'',protest:false},protestNote:''}};
+  if(sp.model==='linescore'){delete m.clock;m.ls={home:[],away:[]};m.inn={n:1,half:'top'};m.he={home:{h:0,e:0},away:{h:0,e:0}};m.innings=sp.innings}
+  SIDES.forEach(s=>{const t=S.teams[m[s].teamId];if(t)m.roster[s]=JSON.parse(JSON.stringify(t.players))});
+  S.matches[m.id]=m;return m;
+}
+const score=(m,s)=>m.model==='linescore'?(m.ls[s]||[]).reduce((a,b)=>a+(+b||0),0):m.goals.filter(g=>g.side===s).length;
+/* ---------- shootout / penalty strokes ---------- */
+const soKicks=m=>(m.so&&m.so.kicks)||[];
+function soState(m){
+  const n=m.soN||5,first=m.so?m.so.first:'home',cnt={home:0,away:0},g={home:0,away:0};
+  soKicks(m).forEach(x=>{cnt[x.side]++;if(x.ok)g[x.side]++});
+  const rh=Math.max(0,n-cnt.home),ra=Math.max(0,n-cnt.away);let winner=null;
+  if(cnt.home<n||cnt.away<n){if(g.home>g.away+ra)winner='home';else if(g.away>g.home+rh)winner='away'}      // regulation attempts: stop as soon as one side can't be caught
+  else if(cnt.home===cnt.away&&g.home!==g.away)winner=g.home>g.away?'home':'away';                           // sudden death: only after both have shot
+  return{n,first,cnt,g,winner,done:!!winner,next:winner?null:(cnt.home===cnt.away?first:other(first))};
+}
+function winnerOf(m){const a=score(m,'home'),b=score(m,'away');if(a!==b)return a>b?'home':'away';return m.soRes&&m.soRes.done?m.soRes.winner:null}
+const soTag=m=>m.soRes?` <span class="sub">(SO ${m.soRes.h}–${m.soRes.a})</span>`:'';
+const elapsed=m=>m.clock.base+(m.clock.running?(Date.now()-m.clock.startedAt)/1000:0);
+const minuteNow=m=>Math.floor(elapsed(m)/60)+1;
+const fmtClock=sec=>{sec=Math.max(0,Math.floor(sec));return String(Math.floor(sec/60)).padStart(2,'0')+':'+String(sec%60).padStart(2,'0')};
+const byNum=(a,b)=>(+a.num)-(+b.num);
+function syncRoster(m,s){const id=m[s].teamId;if(!id)return;S.teams[id]={id,name:m[s].name,players:JSON.parse(JSON.stringify(m.roster[s]))}}
+function mkPid(roster,num,name){let id=slug(name)||('n'+num);if(roster.some(p=>p.id===id))id+='-'+num;return id}
+
+function parseRoster(text){
+  const out=[];const seen=new Set();
+  for(let line of text.split(/\r?\n/)){
+    line=line.trim();if(!line)continue;
+    let num=null,name='';
+    const parts=line.split(/[\t,;]+/).map(x=>x.trim()).filter(Boolean);
+    if(parts.length>1){
+      const i=parts.findIndex(p=>/^#?\d{1,3}$/.test(p));
+      if(i<0)continue;num=parts[i].replace('#','');name=parts.filter((_,j)=>j!==i).join(' ');
+    }else{
+      let r=line.match(/^#?(\d{1,3})\s+(.+)$/);
+      if(r){num=r[1];name=r[2]}else if(r=line.match(/^(.+?)\s+#?(\d{1,3})$/)){num=r[2];name=r[1]}else if(/^#?\d{1,3}$/.test(line)){num=line.replace('#','')}
+    }
+    if(num==null||seen.has(+num))continue;seen.add(+num);
+    out.push({num:String(+num),name:name.trim()});
+  }
+  return out;
+}
+
+/* ---------- sync (Supabase REST; optional) ---------- */
+let dirty=new Set(S.dirty||[]),syncT=null,syncOn=false,lastErr='';
+const saveQ=()=>{S.dirty=[...dirty];save()};
+const cfg=()=>{const s=S.settings;return(s.sbUrl&&s.sbKey&&s.tournament&&s.pin)?{url:s.sbUrl.replace(/\/+$/,''),key:s.sbKey,code:s.tournament,pin:s.pin}:null};
+function setPill(){const p=$('#pill');if(!cfg()){p.className='';p.textContent='local only';return}
+  if(dirty.size){p.className=lastErr?'bad':'wait';p.textContent=lastErr?'offline · '+dirty.size+' queued':'syncing…'}else{p.className='ok';p.textContent='live ✓'}}
+function queueSync(m){if(!cfg())return;dirty.add(m.id);saveQ();setPill();clearTimeout(syncT);syncT=setTimeout(flush,500)}
+async function flush(){
+  const c=cfg();if(!c||syncOn)return;syncOn=true;
+  for(const id of [...dirty]){
+    const m=S.matches[id];if(!m){dirty.delete(id);saveQ();continue}
+    try{
+      const r=await fetch(c.url+'/rest/v1/rpc/upsert_match',{method:'POST',keepalive:true,headers:{apikey:c.key,Authorization:'Bearer '+c.key,'Content-Type':'application/json'},
+        body:JSON.stringify({p_code:c.code,p_pin:c.pin,p_id:id,p_data:Object.assign({},m,{tournament:c.code})})});
+      if(!r.ok){const t=await r.text();throw new Error(r.status+' '+t.slice(0,120))}
+      dirty.delete(id);saveQ();lastErr='';
+    }catch(e){lastErr=String(e.message||e);break}
+  }
+  syncOn=false;setPill();
+}
+setInterval(()=>{if(dirty.size)flush()},8000);
+addEventListener('online',()=>flush());
+async function rpc(name,body){const c=cfg();
+  const r=await fetch(c.url+'/rest/v1/rpc/'+name,{method:'POST',headers:{apikey:c.key,Authorization:'Bearer '+c.key,'Content-Type':'application/json'},body:JSON.stringify(body)});
+  if(!r.ok)throw new Error(r.status+' '+(await r.text()).slice(0,120));
+  try{return await r.json()}catch(e){return null}}
+let remote=new Map(),remoteSince=null,remoteN=0;
+async function fetchRemote(full){const c=cfg();if(!c)return;
+  try{full=full||!remoteSince||(++remoteN%10===0);
+    const rows=await rpc('get_board',{p_code:c.code,p_since:full?null:remoteSince})||[];
+    if(full){remote=new Map();remoteSince=null}
+    rows.forEach(r=>{remote.set(r.id,r.board);if(!remoteSince||r.updated_at>remoteSince)remoteSince=r.updated_at});
+    if((full||rows.length)&&S.view==='matches')render()}catch(e){}}
+setInterval(()=>{if(cfg()&&S.view==='matches'&&document.visibilityState==='visible'&&!$('#modal').classList.contains('on'))fetchRemote()},6000);
+async function takeOver(id){const c=cfg();
+  try{const d=await rpc('get_full',{p_code:c.code,p_pin:c.pin,p_id:id});const r=Array.isArray(d)?d[0]:d;if(!r)throw 0;const l=S.matches[id];
+    if(!l||(l.updated||0)<(r.updated||0)){S.matches[id]=r;SIDES.forEach(x=>syncRoster(r,x))}save();openMatch(id)}
+  catch(e){toast('Could not load that match')}}
+async function testSync(){
+  const c=cfg();if(!c)return toast('Fill in all four sync fields');
+  try{await rpc('get_board',{p_code:c.code,p_since:null});await rpc('get_full',{p_code:c.code,p_pin:c.pin,p_id:'__test__'});toast('Connected ✓')}catch(e){toast(/28000|PIN/.test(String(e.message))?'Wrong code or PIN':'Connection failed')}
+}
+async function pullAll(){
+  const c=cfg();if(!c)return toast('Sync not configured');
+  try{const rows=await rpc('get_full',{p_code:c.code,p_pin:c.pin,p_id:null})||[];let n=0;
+    for(const d of rows){const l=S.matches[d.id];if(!l||(l.updated||0)<(d.updated||0)){S.matches[d.id]=d;SIDES.forEach(x=>syncRoster(d,x));n++}}
+    save();render();toast('Pulled '+n+' match'+(n===1?'':'es'));
+  }catch(e){toast('Pull failed')}
+}
+
+/* ---------- modal helpers ---------- */
+let dlg={};
+function openModal(h){const m=$('#modal');m.innerHTML='<div class="sheet">'+h+'</div>';m.classList.add('on')}
+function closeModal(){$('#modal').classList.remove('on');$('#modal').innerHTML='';if(S.draft){S.draft=null;save()}}
+function saveDraft(){S.draft=Object.assign({},dlg,{mid:S.currentId});save()}
+$('#modal').addEventListener('click',e=>{if(e.target.id==='modal')closeModal()});
+function ask(msg,fn,ok='Confirm'){window._ask=fn;openModal(`<p style="font-size:17px">${esc(msg)}</p><div class="row"><button class="b ghost" onclick="closeModal()">Cancel</button><button class="b red" onclick="closeModal();_ask()">${ok}</button></div>`)}
+
+/* ---------- navigation ---------- */
+function go(v,t){S.view=v;if(t)S.tab=t;S.teamView=null;save();render();scrollTo(0,0)}
+function openMatch(id){S.currentId=id;const m=cur();go('match',m.status==='live'?'live':(m.status==='final'?'sign':'setup'))}
+function renderNav(){
+  const items=[['matches','Matches'],['match','Match'],['history','History'],['settings','Settings']];
+  $('#nav').innerHTML=items.map(([v,l])=>`<button class="${S.view===v?'on':''}" ${v==='match'&&!cur()?'disabled':''} onclick="go('${v}')">${l}</button>`).join('');
+}
+
+/* ---------- views ---------- */
+function vMatches(){
+  const ms=Object.values(S.matches).sort((a,b)=>((b.date||'')+(b.time||'')).localeCompare((a.date||'')+(a.time||''))||b.updated-a.updated);
+  return `<div class="row" style="margin-bottom:12px"><button class="b big" onclick="newMatchModal()">+ New match</button></div>`+
+  (ms.length?`<div class="card">${ms.map(m=>`<div class="li" onclick="openMatch('${m.id}')" style="cursor:pointer">
+    <div><b>${esc(m.home.name||'Home')} v ${esc(m.away.name||'Away')}</b><div class="sub" style="text-align:left">${m.pool?esc(m.pool)+' · ':''}${esc(m.date)} ${esc(m.time)} ${m.pitch?'· Pitch '+esc(m.pitch):''}${m.sportName?' · '+esc(m.sportName):''}</div></div>
+    <div style="text-align:right"><b style="font-size:20px">${score(m,'home')}–${score(m,'away')}</b>${soTag(m)}<br><span class="badge ${m.status}">${m.status}</span></div></div>`).join('')}</div>`
+  :`<div class="card sub">No matches yet. Create one, import a schedule in Settings, or load a demo match.</div>`)+
+  vRemote()+`<div class="row"><button class="b ghost" onclick="loadDemo()">Load demo match</button></div>`;
+}
+function vRemote(){
+  if(!cfg())return '';
+  const ord={live:0,scheduled:1,final:2};
+  const list=[...remote.values()].sort((a,b)=>(ord[a.status]-ord[b.status])||String(a.pitch).localeCompare(String(b.pitch),undefined,{numeric:true})||((a.time||'')).localeCompare(b.time||''));
+  return `<div class="card"><h2>All fields · live</h2>${list.map(m=>{const mine=S.matches[m.id]&&(S.matches[m.id].updated||0)>=(m.updated||0);
+    return `<div class="li"><div><b>${m.pitch?'Pitch '+esc(m.pitch)+' · ':''}${esc(m.home.name)} v ${esc(m.away.name)}</b><div class="sub" style="text-align:left">${m.pool?esc(m.pool)+' · ':''}${esc(m.time)} · <span class="badge ${m.status}">${m.status}</span></div></div>
+    <div style="text-align:right"><b style="font-size:20px">${score(m,'home')}–${score(m,'away')}</b>${soTag(m)}<br><button class="b ghost" style="padding:4px 10px;font-size:13px" onclick="takeOver('${m.id}')">${mine?'Open':m.status==='scheduled'?'Score this':'Take over'}</button></div></div>`}).join('')||'<div class="sub">Nothing from other fields yet.</div>'}
+  <div class="sub" style="text-align:left;margin-top:6px">“Score this” / “Take over” loads the latest copy from the server onto this device. If a phone died mid-match, close the match on the other device first.</div></div>`;
+}
+function newMatchModal(){
+  const d=new Date();const today=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  const teams=Object.values(S.teams).map(t=>`<option value="${esc(t.name)}">`).join('');
+  const pools=[...new Set(Object.values(S.matches).map(m=>m.pool).filter(Boolean))].map(p=>`<option value="${esc(p)}">`).join('');
+  openModal(`<h2>New match</h2>
+  <label>Sport</label><select id="nsp">${Object.entries(SPORTS).map(([k,v])=>`<option value="${k}" ${k===(S.settings.sport||'fieldhockey')?'selected':''}>${esc(v.name)}</option>`).join('')}</select>
+  <div class="row"><div><label>Date</label><input id="nd" type="date" value="${today}"></div><div><label>Time</label><input id="nt" type="time"></div><div><label>Pitch</label><input id="np" placeholder="1"></div></div>
+  <datalist id="tl">${teams}</datalist><datalist id="pl">${pools}</datalist>
+  <div class="row"><div><label>Match type</label><select id="nstage"><option value="pool">Pool play</option><option value="knockout">Crossover / knockout</option></select></div><div><label>Pool (for standings)</label><input id="npool" list="pl" placeholder="Pool A"></div></div>
+  <label>Home team</label><input id="nh" list="tl" placeholder="Team name"><label>Away team</label><input id="na" list="tl" placeholder="Team name">
+  <div class="row" style="margin-top:14px"><button class="b ghost" onclick="closeModal()">Cancel</button><button class="b" onclick="createMatch()">Create</button></div>`);
+}
+function createMatch(){
+  const m=newMatch({sport:$('#nsp').value,pool:$('#npool').value.trim(),stage:$('#nstage').value,date:$('#nd').value,time:$('#nt').value,pitch:$('#np').value,home:$('#nh').value.trim(),away:$('#na').value.trim()});
+  touch(m);closeModal();S.currentId=m.id;go('match','setup');
+}
+
+function vMatch(){
+  const m=cur();
+  const tabs=isLS(m)?[['setup','Setup'],['live','Live'],['sign','Sign-off']]:[['setup','Setup'],['lineup','Lineups'],['live','Live'],['sign','Sign-off']];
+  const views={setup:vSetup,lineup:vLineup,live:vLive,sign:vSign};
+  return `<div class="seg">${tabs.map(([k,l])=>`<button class="${S.tab===k?'on':''}" onclick="go('match','${k}')">${l}</button>`).join('')}</div>`+
+    (tabs.some(t=>t[0]===S.tab)?views[S.tab]:vLive)(m);
+}
+function hasEvents(m){return m.goals.length||m.cards.length||(isLS(m)&&(m.ls.home.length||m.ls.away.length))}
+function vSetup(m){
+  const roster=s=>`<div class="card"><h2>${s==='home'?'Home':'Away'} roster · ${m.roster[s].length}</h2>
+   <label>Team name</label><input value="${esc(m[s].name)}" onchange="setTeam('${s}',this.value)">
+   <div class="row" style="margin:10px 0"><button class="b" onclick="importModal('${s}')">Import roster</button><button class="b ghost" onclick="playerModal('${s}')">+ Add player</button></div>
+   <div class="chips">${m.roster[s].slice().sort(byNum).map(p=>`<span class="chip">${esc(p.num)}<small>${esc(p.name)||'—'}</small></span>`).join('')||'<span class="sub">No players yet.</span>'}</div>
+   ${m.roster[s].length?`<button class="b ghost" style="margin-top:10px" onclick="editRoster('${s}')">Edit / remove players</button>`:''}</div>`;
+  const teamCard=s=>`<div class="card"><h2>${s==='home'?'Home':'Away'} team</h2><label>Team name</label><input value="${esc(m[s].name)}" onchange="setTeam('${s}',this.value)"></div>`;
+  return `<div class="card"><h2>Match</h2>
+   <label>Sport</label><select ${hasEvents(m)?'disabled':''} onchange="setSport(this.value)">${Object.entries(SPORTS).map(([k,v])=>`<option value="${k}" ${m.sport===k||(!m.sport&&k==='fieldhockey')?'selected':''}>${esc(v.name)}</option>`).join('')}</select>
+   <div class="row"><div><label>Date</label><input type="date" value="${esc(m.date)}" onchange="setF('date',this.value)"></div><div><label>Time</label><input type="time" value="${esc(m.time)}" onchange="setF('time',this.value)"></div></div>
+   <div class="row"><div><label>Pitch / field</label><input value="${esc(m.pitch)}" onchange="setF('pitch',this.value)"></div><div><label>Pool</label><input value="${esc(m.pool||'')}" onchange="setF('pool',this.value.trim())"></div></div>
+   <div class="row"><div><label>Game / round</label><input value="${esc(m.game)}" onchange="setF('game',this.value)"></div>
+   <div><label>Match type</label><select onchange="setF('stage',this.value)"><option value="pool" ${m.stage!=='knockout'?'selected':''}>Pool play</option><option value="knockout" ${m.stage==='knockout'?'selected':''}>Crossover / knockout</option></select></div></div>
+   ${SP(m).shootout?`<label>Shootout / penalty strokes — attempts per team</label><div class="seg">${[1,3,5].map(n=>`<button class="${(m.soN||5)===n?'on':''}" onclick="setSoN(${n})">${n}</button>`).join('')}</div>`:''}
+   <label>Umpire / official 1</label><input value="${esc(m.umpires[0])}" onchange="setUmp(0,this.value)">
+   <label>Umpire / official 2</label><input value="${esc(m.umpires[1])}" onchange="setUmp(1,this.value)">
+   <label>Technical official / scorer</label><input value="${esc(m.tech)}" onchange="setF('tech',this.value)"></div>`+
+   (isLS(m)?teamCard('home')+teamCard('away'):roster('home')+roster('away'))+
+   `<div class="row"><button class="b big" onclick="go('match','${isLS(m)?'live':'lineup'}')">${isLS(m)?'Next: Live scoring →':'Next: Lineups →'}</button></div>
+   <div class="row" style="margin-top:12px"><button class="b ghost" onclick="delMatch()">Delete this match</button></div>`;
+}
+function setSport(k){const m=cur(),sp=SPORTS[k];if(!sp||hasEvents(m))return;
+  m.sport=k;m.sportName=sp.name;m.model=sp.model;
+  if(sp.model==='linescore'){delete m.clock;m.ls={home:[],away:[]};m.inn={n:1,half:'top'};m.he={home:{h:0,e:0},away:{h:0,e:0}};m.innings=sp.innings}
+  else{delete m.ls;delete m.inn;delete m.he;delete m.innings;m.clock=m.clock||{period:'1',running:false,base:0,startedAt:null}}
+  touch(m);render()}
+function setF(k,v){const m=cur();m[k]=v;touch(m)}
+function setSoN(n){const m=cur();if(soKicks(m).length)return toast('Shootout already started');m.soN=n;touch(m);render()}
+function setUmp(i,v){const m=cur();m.umpires[i]=v;touch(m)}
+function setTeam(s,v){const m=cur();m[s].name=v.trim();m[s].teamId=slug(v);
+  if(!m.roster[s].length&&S.teams[m[s].teamId])m.roster[s]=JSON.parse(JSON.stringify(S.teams[m[s].teamId].players));
+  syncRoster(m,s);touch(m);render()}
+function delMatch(){ask('Delete this match and its events?',()=>{delete S.matches[S.currentId];S.currentId=null;go('matches')},'Delete')}
+
+function importModal(s){
+  dlg={side:s,list:[]};
+  openModal(`<h2>Import ${s} roster</h2>
+  <p class="sub" style="text-align:left">Paste one player per line — “12, Jane Smith”, “12 Jane Smith”, “Jane Smith 12”, or tab-separated rows copied from a spreadsheet. Or choose a CSV file.</p>
+  <textarea id="rt" placeholder="1, Alex Doe&#10;7, Sam Lee" oninput="previewRoster()"></textarea>
+  <label>…or CSV / text file</label><input type="file" accept=".csv,.txt,.tsv" onchange="readRosterFile(this)">
+  <div class="chk"><input type="checkbox" id="rrep" checked><div><b>Replace current roster</b><div class="sub" style="text-align:left">Untick to add to the existing players.</div></div></div>
+  <div id="rprev" class="sub" style="text-align:left"></div>
+  <div class="row" style="margin-top:12px"><button class="b ghost" onclick="closeModal()">Cancel</button><button class="b" onclick="applyRoster()">Import</button></div>`);
+}
+function readRosterFile(inp){const f=inp.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{$('#rt').value=r.result;previewRoster()};r.readAsText(f)}
+function previewRoster(){dlg.list=parseRoster($('#rt').value);$('#rprev').textContent=dlg.list.length?dlg.list.length+' players found: '+dlg.list.slice(0,6).map(p=>'#'+p.num+' '+p.name).join(', ')+(dlg.list.length>6?'…':''):'No players found yet.'}
+function applyRoster(){
+  previewRoster();if(!dlg.list.length)return toast('Nothing to import');
+  const m=cur(),s=dlg.side;let r=$('#rrep').checked?[]:m.roster[s].slice();
+  dlg.list.forEach(p=>{if(r.some(x=>x.num===p.num))return;r.push({id:mkPid(r,p.num,p.name),num:p.num,name:p.name})});
+  m.roster[s]=r.sort(byNum);syncRoster(m,s);touch(m);closeModal();render();toast('Roster imported');
+}
+function playerModal(s){dlg={side:s};openModal(`<h2>Add player</h2><div class="row"><div><label>Number</label><input id="pn" type="number" inputmode="numeric"></div><div style="flex:3"><label>Name</label><input id="pm"></div></div>
+  <div class="row" style="margin-top:12px"><button class="b ghost" onclick="closeModal()">Cancel</button><button class="b" onclick="addPlayer()">Add</button></div>`)}
+function addPlayer(){const m=cur(),s=dlg.side,num=String(+$('#pn').value),name=$('#pm').value.trim();
+  if(!$('#pn').value)return toast('Enter a number');if(m.roster[s].some(p=>p.num===num))return toast('Number already used');
+  m.roster[s].push({id:mkPid(m.roster[s],num,name),num,name});m.roster[s].sort(byNum);syncRoster(m,s);touch(m);closeModal();render()}
+function editRoster(s){const m=cur();dlg={side:s};
+  openModal(`<h2>Edit ${s} roster</h2>${m.roster[s].map(p=>`<div class="li"><span><b>#${esc(p.num)}</b> ${esc(p.name)}</span><button class="b ghost" onclick="rmPlayer('${s}','${p.id}')">Remove</button></div>`).join('')}<button class="b" style="margin-top:12px;width:100%" onclick="closeModal()">Done</button>`)}
+function rmPlayer(s,id){const m=cur();m.roster[s]=m.roster[s].filter(p=>p.id!==id);m.lineup[s]=m.lineup[s].filter(x=>x!==id);syncRoster(m,s);touch(m);editRoster(s);render()}
+
+function vLineup(m){
+  const side=s=>`<div class="card"><h2>${esc(m[s].name||s)} · starters ${m.lineup[s].length}/${S.settings.starters||SP(m).starters||11}</h2>
+   ${m.roster[s].length?`<div class="chips">${m.roster[s].slice().sort(byNum).map(p=>`<button class="chip ${m.lineup[s].includes(p.id)?'on':''}" onclick="togStart('${s}','${p.id}')">${esc(p.num)}<small>${esc(p.name)||'—'}</small></button>`).join('')}</div>`
+   :`<div class="sub">No roster. Import one in Setup.</div>`}
+   <button class="b ghost" style="margin-top:10px" onclick="playerModal('${s}')">+ Add late player</button></div>`;
+  return `<p class="sub">Tap players to mark the starting lineup. Team managers can read their numbers aloud; the technical official taps them in.</p>`+side('home')+side('away')+
+    `<button class="b big" style="width:100%" onclick="go('match','live')">Go to live scoring →</button>`;
+}
+function togStart(s,id){const m=cur(),l=m.lineup[s],i=l.indexOf(id);i>=0?l.splice(i,1):l.push(id);touch(m);render()}
+
+function vLive(m){
+  if(isLS(m))return vLiveLS(m);
+  const locked=m.status==='final',sp=SP(m);
+  const evs=[...m.goals.map(g=>({k:'g',t:g})),...m.cards.map(c=>({k:'c',t:c}))].sort((a,b)=>(a.t.min-b.t.min)||(a.t.ts-b.t.ts));
+  const who=e=>e.num?`#${esc(e.num)} ${esc(e.name||'')}`:'Unknown';
+  return `<div class="card">
+   <div class="score"><div class="t">${esc(m.home.name||'Home')}</div><div></div><div class="t">${esc(m.away.name||'Away')}</div>
+   <div class="n">${score(m,'home')}</div><div class="dash">–</div><div class="n">${score(m,'away')}</div></div>
+   <div id="clk">${fmtClock(elapsed(m))}</div>
+   <div class="sub">${m.pool?esc(m.pool)+' · ':''}${esc(m.date)} ${esc(m.time)} ${m.pitch?'· Pitch '+esc(m.pitch):''} · <span class="badge ${m.status}">${m.status}</span></div>
+   ${locked?'':`<div class="row" style="margin-top:12px"><button class="b ${m.clock.running?'red':'ok'}" onclick="toggleClock()">${m.clock.running?'Pause clock':'Start clock'}</button>
+   <select onchange="setPeriod(this.value)">${sp.periods.map(([v,l])=>`<option ${m.clock.period===v?'selected':''} value="${v}">${esc(l)}</option>`).join('')}</select>
+   <button class="b ghost" onclick="clockModal()">Set clock</button></div>`}</div>
+  ${locked?`<div class="warn">This match is final. Reopen it from Sign-off to make changes.</div>`:`
+  <div class="row" style="margin-bottom:8px"><button class="b big" onclick="goalModal('home')">Goal<br><small>${esc(m.home.name||'Home')}</small></button><button class="b big" onclick="goalModal('away')">Goal<br><small>${esc(m.away.name||'Away')}</small></button></div>
+  <div class="row" style="margin-bottom:12px"><button class="b big red" onclick="cardModal('home')">Card<br><small>${esc(m.home.name||'Home')}</small></button><button class="b big red" onclick="cardModal('away')">Card<br><small>${esc(m.away.name||'Away')}</small></button></div>`}
+  ${vShootout(m,locked)}
+  <div class="card"><h2>Match log</h2>${evs.length?evs.map(({k,t:e})=>{const cd=k==='c'?cdef(m,e.type):null;return `<div class="ev"><span class="m">${e.min}'</span>
+   ${k==='g'?`<span>⚽ <b>${esc(e.type)}</b> · ${who(e)}${e.anum?` <span class="sub">(A: #${esc(e.anum)} ${esc(e.aname||'')})</span>`:''} <span class="sub">(${esc(m[e.side].name||e.side)})</span></span>`
+   :`<span><span class="dot" style="background:${cd.c}"></span> <b>${esc(cd.l)}</b> · ${e.who==='official'?'Team official':who(e)} <span class="sub">(${esc(m[e.side].name||e.side)}${e.ump?' · by '+esc(e.ump):''}${e.note?' · '+esc(e.note):''})</span></span>`}
+   ${locked?'':`<button class="x" onclick="editEv('${k}','${e.id}')">✎</button><button class="x" onclick="delEv('${k}','${e.id}')">✕</button>`}</div>`}).join(''):'<div class="sub">No goals or cards yet.</div>'}</div>`;
+}
+/* shootout UI */
+let soSel={pid:null,num:''};
+function soStart(){const m=cur();m.so={first:'home',kicks:[]};touch(m);render()}
+function soSet(k,v){const m=cur();if(soKicks(m).length)return;if(k==='n')m.soN=v;else m.so.first=v;touch(m);render()}
+function soCancel(){ask('Remove the shootout and all its attempts?',()=>{const m=cur();m.so=null;m.soRes=null;soSel={pid:null,num:''};touch(m);render()},'Remove')}
+function soPick(id){soSel={pid:id,num:''};render()}
+function soUpd(m){const st=soState(m);m.soRes=soKicks(m).length?{h:st.g.home,a:st.g.away,done:st.done,winner:st.winner}:null}
+function soUndo(){const m=cur();m.so.kicks.pop();soUpd(m);touch(m);render()}
+function soKick(ok){const m=cur(),st=soState(m);if(st.done)return;const r=resolve(m,st.next,soSel.pid,soSel.num);if(!r.num)return toast('Pick the shooter’s number');
+  m.so.kicks.push({id:uid(),ts:Date.now(),side:st.next,ok,...r});soSel={pid:null,num:''};soUpd(m);touch(m);render()}
+function vShootout(m,locked){
+  if(!SP(m).shootout)return '';
+  const tied=score(m,'home')===score(m,'away');
+  if(!m.so){
+    if(locked||!tied)return '';
+    return `<div class="card"><h2>Shootout / penalty strokes</h2>${m.stage==='knockout'?'<div class="warn">Tied after regulation — a shootout is needed to decide the winner.</div>':'<div class="sub" style="text-align:left;margin-bottom:8px">Pool play can end tied. Only start a shootout if this match needs a winner.</div>'}<button class="b big" style="width:100%" onclick="soStart()">Start shootout</button></div>`}
+  const st=soState(m),k=soKicks(m),started=k.length>0,N=Math.max(st.n,st.cnt.home,st.cnt.away);
+  const box=s=>{const mine=k.filter(x=>x.side===s);return Array.from({length:N},(_,i)=>{const x=mine[i];return `<span title="${x?esc('#'+x.num+' '+x.name):''}" style="display:inline-block;width:30px;height:30px;line-height:30px;margin-right:4px;border-radius:6px;text-align:center;font-weight:800;${x?(x.ok?'background:#1b8a3a;color:#fff':'background:#c8202f;color:#fff'):'background:#e6ebf1;color:#9aa5b1'}">${x?(x.ok?'✓':'✗'):'·'}</span>`}).join('')};
+  const row=s=>`<div class="li"><div><b>${esc(m[s].name||s)}</b><div style="margin-top:4px">${box(s)}</div></div><b style="font-size:26px">${st.g[s]}</b></div>`;
+  const used=new Set(k.filter(x=>x.side===st.next).map(x=>x.pid));
+  return `<div class="card"><h2>Shootout · ${st.n} attempt${st.n>1?'s':''} each, then sudden death</h2>
+   ${!started&&!locked?`<label>Attempts per team</label><div class="seg">${[1,3,5].map(n=>`<button class="${st.n===n?'on':''}" onclick="soSet('n',${n})">${n}</button>`).join('')}</div>
+     <label>Shoots first</label><div class="seg">${SIDES.map(s=>`<button class="${st.first===s?'on':''}" onclick="soSet('f','${s}')">${esc(m[s].name||s)}</button>`).join('')}</div>`:''}
+   ${row(st.first)}${row(other(st.first))}
+   ${st.done?`<div class="warn" style="background:#e3f6e8;border-color:#9bd4aa;margin-top:8px"><b>${esc(m[st.winner].name)}</b> win the shootout ${st.g[st.winner]}–${st.g[other(st.winner)]}</div>`
+     :locked?'':`<h3>Next: ${esc(m[st.next].name||st.next)}</h3><div class="chips">${m.roster[st.next].slice().sort(byNum).map(p=>`<button class="chip ${soSel.pid===p.id?'on':''}" style="${used.has(p.id)&&soSel.pid!==p.id?'opacity:.45':''}" onclick="soPick('${p.id}')">${esc(p.num)}<small>${esc(p.name)||'—'}</small></button>`).join('')}</div>
+        <label>Or type a number</label><input type="number" inputmode="numeric" value="${soSel.pid?'':esc(soSel.num)}" oninput="soSel={pid:null,num:this.value}">
+        <div class="row" style="margin-top:10px"><button class="b big ok" onclick="soKick(true)">Scored</button><button class="b big red" onclick="soKick(false)">Missed</button></div>`}
+   ${locked?'':`<div class="row" style="margin-top:10px">${started?'<button class="b ghost" onclick="soUndo()">Undo last</button>':''}<button class="b ghost" onclick="soCancel()">${started?'Clear shootout':'Cancel shootout'}</button></div>`}</div>`;
+}
+/* baseball / softball line score */
+function vLiveLS(m){
+  const locked=m.status==='final',inn=m.inn,bat=inn.half==='top'?'away':'home',base=m.innings||SP(m).innings||9;
+  const n=Math.max(base,m.ls.home.length,m.ls.away.length,inn.n);
+  const cell=(s,i)=>`<td class="${!locked&&i===inn.n-1&&s===bat?'cur':''}" ${locked?'':`onclick="cellModal('${s}',${i})"`}>${m.ls[s][i]==null?'':m.ls[s][i]}</td>`;
+  const row=s=>`<tr><td><b>${esc(m[s].name||s)}</b></td>${Array.from({length:n},(_,i)=>cell(s,i)).join('')}<td><b>${score(m,s)}</b></td><td>${m.he[s].h}</td><td>${m.he[s].e}</td></tr>`;
+  const he=s=>`<div class="li"><b>${esc(m[s].name||s)}</b><span class="step">H <button onclick="lsHE('${s}','h',-1)">−</button><b>${m.he[s].h}</b><button onclick="lsHE('${s}','h',1)">+</button>
+    &nbsp;E <button onclick="lsHE('${s}','e',-1)">−</button><b>${m.he[s].e}</b><button onclick="lsHE('${s}','e',1)">+</button></span></div>`;
+  return `<div class="card"><div class="score"><div class="t">${esc(m.home.name||'Home')}</div><div></div><div class="t">${esc(m.away.name||'Away')}</div>
+   <div class="n">${score(m,'home')}</div><div class="dash">–</div><div class="n">${score(m,'away')}</div></div>
+   <div class="sub" style="margin:8px 0">${m.pool?esc(m.pool)+' · ':''}${esc(m.date)} ${esc(m.time)} ${m.pitch?'· Field '+esc(m.pitch):''} · <span class="badge ${m.status}">${m.status}</span></div>
+   <div style="overflow-x:auto"><table class="ls"><tr><th></th>${Array.from({length:n},(_,i)=>`<th>${i+1}</th>`).join('')}<th>R</th><th>H</th><th>E</th></tr>${row('away')}${row('home')}</table></div></div>`+
+  (locked?`<div class="warn">This game is final. Reopen it from Sign-off to make changes.</div>`:`
+   <div class="card"><h2>${inn.half==='top'?'Top':'Bottom'} ${inn.n} · ${esc(m[bat].name||bat)} batting</h2>
+   <div class="row" style="margin-bottom:8px"><button class="b big ok" onclick="lsRun(1)">+1 Run</button><button class="b big ghost" onclick="lsRun(-1)">−1 Run</button></div>
+   <div class="row"><button class="b big" onclick="lsHalf()">End ${inn.half==='top'?'top':'bottom'} ${inn.n} →</button><button class="b ghost" onclick="lsBack()">Back</button></div></div>
+   <div class="card"><h2>Hits &amp; errors</h2>${he('away')}${he('home')}</div>
+   <div class="sub">Tap any inning box to correct its runs.</div>`);
+}
+function lsStart(m){if(m.status==='scheduled')m.status='live'}
+function fillTo(m,s,i){for(let k=0;k<=i;k++)if(m.ls[s][k]==null)m.ls[s][k]=0}
+function lsRun(d){const m=cur(),s=m.inn.half==='top'?'away':'home',i=m.inn.n-1;fillTo(m,s,i);m.ls[s][i]=Math.max(0,m.ls[s][i]+d);lsStart(m);touch(m);render()}
+function lsHalf(){const m=cur(),s=m.inn.half==='top'?'away':'home';fillTo(m,s,m.inn.n-1);
+  if(m.inn.half==='top')m.inn.half='bottom';else{m.inn.half='top';m.inn.n++}lsStart(m);touch(m);render()}
+function lsBack(){const m=cur();if(m.inn.half==='bottom')m.inn.half='top';else if(m.inn.n>1){m.inn.n--;m.inn.half='bottom'}touch(m);render()}
+function lsHE(s,k,d){const m=cur();m.he[s][k]=Math.max(0,m.he[s][k]+d);lsStart(m);touch(m);render()}
+function cellModal(s,i){const m=cur();dlg={s,i};openModal(`<h2>${esc(m[s].name||s)} · inning ${i+1}</h2><label>Runs</label><input id="cv" type="number" inputmode="numeric" value="${m.ls[s][i]==null?'':m.ls[s][i]}">
+  <div class="row" style="margin-top:12px"><button class="b ghost" onclick="closeModal()">Cancel</button><button class="b" onclick="saveCell()">Save</button></div>`)}
+function saveCell(){const m=cur(),v=$('#cv').value;fillTo(m,dlg.s,dlg.i);m.ls[dlg.s][dlg.i]=v===''?null:Math.max(0,+v);lsStart(m);touch(m);closeModal();render()}
+function tick(){const m=cur(),e=$('#clk');if(m&&e)e.textContent=fmtClock(elapsed(m))}
+setInterval(tick,500);
+function toggleClock(){const m=cur(),c=m.clock;
+  if(c.running){c.base=elapsed(m);c.running=false;c.startedAt=null}else{c.startedAt=Date.now();c.running=true;if(m.status==='scheduled')m.status='live'}
+  touch(m);render()}
+function setPeriod(v){const m=cur();m.clock.period=v;touch(m)}
+function clockModal(){const m=cur(),e=Math.floor(elapsed(m));
+  openModal(`<h2>Set match clock</h2><div class="row"><div><label>Minutes</label><input id="cm" type="number" inputmode="numeric" value="${Math.floor(e/60)}"></div><div><label>Seconds</label><input id="cs" type="number" inputmode="numeric" value="${e%60}"></div></div>
+  <div class="row" style="margin-top:12px"><button class="b ghost" onclick="closeModal()">Cancel</button><button class="b" onclick="applyClock()">Set</button></div>`)}
+function applyClock(){const m=cur(),c=m.clock,t=(+$('#cm').value||0)*60+(+$('#cs').value||0);c.base=t;if(c.running)c.startedAt=Date.now();touch(m);closeModal();render()}
+
+/* goals */
+const pside=()=>dlg.kind==='g'&&dlg.type==='OG'?other(dlg.side):dlg.side;
+function chipsOnly(m,s,sel,fn){
+  const st=m.lineup[s];const r=m.roster[s].slice().sort((a,b)=>(st.includes(b.id)-st.includes(a.id))||byNum(a,b));
+  return `<div class="chips">${r.map(p=>`<button class="chip ${sel===p.id?'on':''}" onclick="${fn}('${p.id}')">${esc(p.num)}<small>${esc(p.name)||'—'}</small></button>`).join('')||'<span class="sub">No roster — type a number below.</span>'}</div>`;
+}
+function playerChips(m,s,sel,fn){
+  return chipsOnly(m,s,sel,fn)+`<label>Or type a number not on the roster</label><input type="number" inputmode="numeric" value="${dlg.pid?'':esc(dlg.num||'')}" oninput="dlg.pid=null;dlg.num=this.value;saveDraft()">`;
+}
+function goalModal(side,id){const m=cur(),g=id?m.goals.find(x=>x.id===id):null;
+  dlg={kind:'g',id,side:g?g.side:side,pid:g?g.pid:null,num:g?g.num:'',apid:g?g.apid:null,min:g?g.min:minuteNow(m),type:g?g.type:SP(m).types[0][0]};drawGoal()}
+function setGType(t){dlg.min=+$('#gm').value||dlg.min;if((dlg.type==='OG')!==(t==='OG')){dlg.pid=null;dlg.num='';dlg.apid=null}dlg.type=t;drawGoal()}
+function drawGoal(){const m=cur(),sp=SP(m);saveDraft();const ps=pside();
+  openModal(`<h2>Goal · ${esc(m[dlg.side].name||dlg.side)}</h2><label>How</label>
+  <div class="seg">${sp.types.map(([k,l])=>`<button class="${dlg.type===k?'on':''}" onclick="setGType('${k}')">${k}<br><small>${esc(l)}</small></button>`).join('')}</div>
+  <label>Minute</label><input id="gm" type="number" inputmode="numeric" value="${dlg.min}" oninput="dlg.min=+this.value;saveDraft()">
+  <label>${dlg.type==='OG'?'Own-goal player ('+esc(m[ps].name||ps)+')':'Scorer'}</label>${playerChips(m,ps,dlg.pid,'pickG')}
+  ${sp.assist&&dlg.type!=='OG'?`<label>Assist (optional — tap again to clear)</label>${chipsOnly(m,dlg.side,dlg.apid,'pickA')}`:''}
+  <div class="row" style="margin-top:14px"><button class="b ghost" onclick="closeModal()">Cancel</button><button class="b ok" onclick="saveGoal()">Save goal</button></div>`)}
+function pickG(id){dlg.pid=id;dlg.num='';dlg.min=+$('#gm').value||dlg.min;if(dlg.apid===id)dlg.apid=null;drawGoal()}
+function pickA(id){if(id===dlg.pid)return;dlg.apid=dlg.apid===id?null:id;dlg.min=+$('#gm').value||dlg.min;drawGoal()}
+function resolve(m,s,pid,num){const p=pid&&m.roster[s].find(x=>x.id===pid);return p?{pid:p.id,num:p.num,name:p.name}:{pid:null,num:String(num||''),name:''}}
+function saveGoal(){const m=cur();dlg.min=+$('#gm').value||dlg.min;const r=resolve(m,pside(),dlg.pid,dlg.num);
+  if(!r.num)return toast('Pick the scorer’s number');
+  const a=dlg.apid&&dlg.type!=='OG'?resolve(m,dlg.side,dlg.apid,''):null;
+  const o={side:dlg.side,min:dlg.min,type:dlg.type,period:m.clock.period,...r,apid:a?a.pid:null,anum:a?a.num:'',aname:a?a.name:''};
+  if(dlg.id)Object.assign(m.goals.find(x=>x.id===dlg.id),o);else m.goals.push({id:uid(),ts:Date.now(),...o});
+  touch(m);closeModal();render()}
+
+/* cards / penalties */
+function cardModal(side,id){const m=cur(),c=id?m.cards.find(x=>x.id===id):null,cs=SP(m).cards;
+  dlg={kind:'c',id,side:c?c.side:side,pid:c?c.pid:null,num:c?c.num:'',who:c?c.who:'player',type:c?c.type:(cs.find(x=>x.k==='yellow')||cs[0]).k,min:c?c.min:minuteNow(m),ump:c?c.ump:'',note:c?c.note:''};drawCard()}
+function drawCard(){const m=cur();saveDraft();const ups=m.umpires.filter(Boolean),cs=SP(m).cards;
+  openModal(`<h2>${cs.length>3?'Penalty':'Card'} · ${esc(m[dlg.side].name||dlg.side)}</h2>
+  <div class="seg">${cs.map(d=>`<button style="${dlg.type===d.k?`background:${d.c};color:${d.k==='yellow'?'#000':'#fff'}`:''}" onclick="dlg.type='${d.k}';dlg.min=+$('#cmin').value||dlg.min;drawCard()">${esc(d.l)}</button>`).join('')}</div>
+  <label>Minute</label><input id="cmin" type="number" inputmode="numeric" value="${dlg.min}" oninput="dlg.min=+this.value;saveDraft()">
+  <label>Awarded by</label><div class="chips">${(ups.length?ups:['Umpire 1','Umpire 2']).map((u,i)=>`<button class="chip ${dlg.ump===u?'on':''}" onclick="pickUmp(${i})">${esc(u)}</button>`).join('')}</div>
+  <label>Issued to</label><div class="seg"><button class="${dlg.who==='player'?'on':''}" onclick="dlg.who='player';drawCard()">Player</button><button class="${dlg.who==='official'?'on':''}" onclick="dlg.who='official';drawCard()">Team official</button></div>
+  ${dlg.who==='player'?playerChips(m,dlg.side,dlg.pid,'pickC'):''}
+  <label>Note / duration (optional)</label><input id="cn" oninput="dlg.note=this.value;saveDraft()" value="${esc(dlg.note)}" placeholder="e.g. 5 min, dissent">
+  <div class="row" style="margin-top:14px"><button class="b ghost" onclick="closeModal()">Cancel</button><button class="b red" onclick="saveCard()">Save</button></div>`)}
+function pickUmp(i){const m=cur(),u=m.umpires.filter(Boolean);dlg.ump=(u.length?u:['Umpire 1','Umpire 2'])[i];dlg.min=+$('#cmin').value||dlg.min;dlg.note=$('#cn').value;drawCard()}
+function pickC(id){dlg.pid=id;dlg.num='';dlg.min=+$('#cmin').value||dlg.min;dlg.note=$('#cn').value;drawCard()}
+function saveCard(){const m=cur();dlg.min=+$('#cmin').value||dlg.min;dlg.note=$('#cn').value.trim();
+  const r=dlg.who==='player'?resolve(m,dlg.side,dlg.pid,dlg.num):{pid:null,num:'',name:''};
+  if(dlg.who==='player'&&!r.num)return toast('Pick the player’s number');
+  const d=cdef(m,dlg.type);
+  const o={side:dlg.side,min:dlg.min,type:dlg.type,who:dlg.who,ump:dlg.ump,note:dlg.note,period:m.clock.period,col:d.c,lbl:d.l,w:d.w,...r};
+  if(dlg.id)Object.assign(m.cards.find(x=>x.id===dlg.id),o);else m.cards.push({id:uid(),ts:Date.now(),...o});
+  touch(m);closeModal();render()}
+function editEv(k,id){k==='g'?goalModal(null,id):cardModal(null,id)}
+function delEv(k,id){ask('Delete this entry?',()=>{const m=cur();if(k==='g')m.goals=m.goals.filter(x=>x.id!==id);else m.cards=m.cards.filter(x=>x.id!==id);touch(m);render()},'Delete')}
+
+/* sign-off */
+function vSign(m){
+  const so=m.signoff,final=m.status==='final';
+  const side=s=>`<div class="card"><h2>${esc(m[s].name||s)} manager</h2>
+   <div class="chk"><input type="checkbox" ${so[s].ok?'checked':''} onchange="setSO('${s}','ok',this.checked)"><div><b>Scorecard is correct</b><div class="sub" style="text-align:left">Goals, cards and final score reviewed.</div></div></div>
+   <div class="row"><div><label>Initials</label><input maxlength="5" value="${esc(so[s].initials)}" onchange="setSO('${s}','initials',this.value.toUpperCase())"></div><div style="flex:2"><label>Manager name</label><input value="${esc(so[s].manager)}" onchange="setSO('${s}','manager',this.value)"></div></div>
+   <div class="chk"><input type="checkbox" ${so[s].protest?'checked':''} onchange="setSO('${s}','protest',this.checked)"><div><b>Signed under protest</b></div></div></div>`;
+  return `<div class="card"><h2>Final score</h2><div class="score"><div class="t">${esc(m.home.name)}</div><div></div><div class="t">${esc(m.away.name)}</div><div class="n">${score(m,'home')}</div><div class="dash">–</div><div class="n">${score(m,'away')}</div></div>
+   <div class="sub" style="margin-top:6px">${isLS(m)?'Review the line score in the Live tab.':`${m.goals.length} goal${m.goals.length===1?'':'s'} · ${m.cards.length} card${m.cards.length===1?'':'s'} — review in the Live tab log.`}${m.soRes?` Shootout ${m.soRes.h}–${m.soRes.a}${m.soRes.done?' ('+esc(m[m.soRes.winner].name)+' win)':' (not finished)'}.`:''}</div></div>`+side('home')+side('away')+
+   `<div class="card"><label>Protest notes (optional)</label><textarea onchange="setSOnote(this.value)">${esc(so.protestNote)}</textarea></div>`+
+   (final?`<button class="b big ok" style="width:100%;margin-bottom:8px" disabled>Match is FINAL</button><button class="b ghost" style="width:100%" onclick="reopen()">Reopen match</button>`
+         :`<button class="b big ok" style="width:100%" onclick="finalize()">Mark match final</button>`)+
+   `<div class="row noprint" style="margin-top:12px"><button class="b ghost" onclick="copySummary()">Copy summary</button><button class="b ghost" onclick="exportCSV()">Export CSV</button><button class="b ghost" onclick="try{window.print()}catch(e){}">Print</button></div>`;
+}
+function setSO(s,k,v){const m=cur();m.signoff[s][k]=v;touch(m)}
+function setSOnote(v){const m=cur();m.signoff.protestNote=v;touch(m)}
+function finalize(){const m=cur();const go=()=>{if(m.clock&&m.clock.running){m.clock.base=elapsed(m);m.clock.running=false}m.status='final';touch(m);render()};
+  const probs=[];if(!(m.signoff.home.ok&&m.signoff.away.ok))probs.push('not both managers have confirmed the scorecard');
+  if(m.stage==='knockout'&&!winnerOf(m))probs.push('this knockout match has no winner (tied, with no completed shootout)');
+  probs.length?ask('Heads up: '+probs.join(' and ')+'. Mark final anyway?',go,'Mark final'):go()}
+function reopen(){const m=cur();m.status='live';touch(m);render()}
+function summaryText(m){
+  const L=[`${m.home.name} ${score(m,'home')} – ${score(m,'away')} ${m.away.name}`,`${m.sportName||''} ${m.pool||''}`.trim(),`${m.date} ${m.time}  Pitch ${m.pitch}  ${m.game}`.trim(),`Officials: ${m.umpires.filter(Boolean).join(', ')}  Scorer: ${m.tech}`];
+  if(isLS(m)){L.push('Line score:');for(const s of ['away','home'])L.push(`  ${m[s].name}: ${m.ls[s].map(v=>v==null?'-':v).join(' ')}   R ${score(m,s)}  H ${m.he[s].h}  E ${m.he[s].e}`)}
+  else{
+    L.push('Goals:');m.goals.slice().sort((a,b)=>a.min-b.min).forEach(g=>L.push(`  ${g.min}' ${g.type} #${g.num} ${g.name} (${m[g.side].name})${g.anum?' assist #'+g.anum+' '+g.aname:''}`));
+    L.push('Cards:');m.cards.slice().sort((a,b)=>a.min-b.min).forEach(c=>L.push(`  ${c.min}' ${cdef(m,c.type).l} ${c.who==='official'?'Team official':'#'+c.num+' '+c.name} (${m[c.side].name}) by ${c.ump||'?'}`));
+  }
+  if(soKicks(m).length){const st=soState(m);L.push(`Shootout (${st.n} each): ${m.home.name} ${st.g.home} – ${st.g.away} ${m.away.name}${st.done?' — '+m[st.winner].name+' win':''}`);soKicks(m).forEach((x,i)=>L.push(`  ${i+1}. ${m[x.side].name} #${x.num} ${x.name} ${x.ok?'scored':'missed'}`))}
+  SIDES.forEach(s=>L.push(`${m[s].name}: ${m.signoff[s].ok?'confirmed '+m.signoff[s].initials:'NOT confirmed'}${m.signoff[s].protest?' — SIGNED UNDER PROTEST':''}`));
+  return L.join('\n');
+}
+function copySummary(){try{navigator.clipboard.writeText(summaryText(cur())).then(()=>toast('Copied'),()=>toast('Copy blocked'))}catch(e){toast('Copy blocked')}}
+function download(name,text,type){try{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;document.body.appendChild(a);a.click();a.remove()}catch(e){toast('Download blocked')}}
+function exportCSV(){const m=cur(),q=v=>'"'+String(v??'').replace(/"/g,'""')+'"';let rows;
+  if(isLS(m)){rows=[['match','date','time','field','pool','team','inning','runs']];
+    for(const s of SIDES)m.ls[s].forEach((v,i)=>rows.push([m.home.name+' v '+m.away.name,m.date,m.time,m.pitch,m.pool,m[s].name,i+1,v==null?'':v]));
+  }else{rows=[['match','date','time','pitch','pool','event','minute','team','number','player','type','awarded_by','note','assist']];
+    const base=[m.home.name+' v '+m.away.name,m.date,m.time,m.pitch,m.pool];
+    m.goals.forEach(g=>rows.push([...base,'goal',g.min,m[g.side].name,g.num,g.name,g.type,'','',g.anum?'#'+g.anum+' '+g.aname:'']));
+    m.cards.forEach(c=>rows.push([...base,'card',c.min,m[c.side].name,c.num,c.who==='official'?'Team official':c.name,cdef(m,c.type).l,c.ump,c.note,'']));
+    soKicks(m).forEach(x=>rows.push([...base,'shootout','',m[x.side].name,x.num,x.name,x.ok?'scored':'missed','','','']));}
+  download('scorekeeper-'+slug(m.home.name+'-v-'+m.away.name)+'.csv',rows.map(r=>r.map(q).join(',')).join('\n'),'text/csv')}
+
+/* history */
+function computeStats(){
+  const teams={};
+  const T=(id,name)=>teams[id]??={id,name,gp:0,w:0,d:0,l:0,gf:0,ga:0,off:0,players:{},matches:[]};
+  for(const m of Object.values(S.matches)){
+    if(m.status==='scheduled')continue;
+    const sc={home:score(m,'home'),away:score(m,'away')};
+    for(const s of SIDES){
+      const o=other(s),id=m[s].teamId||slug(m[s].name);if(!id)continue;
+      const t=T(id,m[s].name);t.name=m[s].name;t.gp++;t.gf+=sc[s];t.ga+=sc[o];
+      {const wn=winnerOf(m);wn===s?t.w++:wn===o?t.l++:t.d++}
+      t.matches.push({id:m.id,date:m.date,opp:m[o].name,gf:sc[s],ga:sc[o],status:m.status});
+      if(isLS(m))continue;
+      const seen=new Set();
+      const P=pid=>{const r=m.roster[s].find(x=>x.id===pid);if(!r)return null;const p=t.players[pid]??={pid,num:r.num,name:r.name,gp:0,g:0,a:0,og:0,t:{},c:{}};p.num=r.num;if(!seen.has(pid)){seen.add(pid);p.gp++}return p};
+      m.lineup[s].forEach(P);
+      m.goals.forEach(g=>{
+        if((g.type==='OG'?other(g.side):g.side)===s&&g.pid){const p=P(g.pid);if(p){if(g.type==='OG')p.og++;else{p.g++;p.t[g.type]=(p.t[g.type]||0)+1}}}
+        if(g.side===s&&g.apid&&g.type!=='OG'){const p=P(g.apid);if(p)p.a++}
+      });
+      m.cards.filter(c=>c.side===s).forEach(c=>{if(c.who==='official'){t.off++;return}const p=c.pid&&P(c.pid);if(p)p.c[c.type]=(p.c[c.type]||0)+1});
+    }
+  }
+  return teams;
+}
+const cardsTxt=c=>Object.entries(c).map(([k,n])=>n+(ALLCARDS[k]?ALLCARDS[k].s:k)).join(' ')||'–';
+const howTxt=t=>Object.entries(t).map(([k,n])=>k+' '+n).join(' · ')||'–';
+function vHistory(){
+  const T=computeStats();
+  if(S.teamView&&T[S.teamView]){const t=T[S.teamView];
+    return `<button class="b ghost" onclick="S.teamView=null;render()">← All teams</button>
+    <div class="card" style="margin-top:12px"><h2>${esc(t.name)}</h2><div class="sub">${t.gp} GP · ${t.w}W ${t.d}D ${t.l}L · For ${t.gf} Against ${t.ga}${t.off?' · '+t.off+' official card'+(t.off>1?'s':''):''}</div></div>
+    <div class="card" style="overflow-x:auto"><h2>Players</h2><table><tr><th>Player</th><th>GP</th><th>G</th><th>A</th><th>OG</th><th>How</th><th>Cards</th></tr>
+    ${Object.values(t.players).sort((a,b)=>b.g-a.g||b.a-a.a||a.num-b.num).map(p=>`<tr><td>#${esc(p.num)} ${esc(p.name)}</td><td>${p.gp}</td><td><b>${p.g}</b></td><td>${p.a}</td><td>${p.og}</td><td>${esc(howTxt(p.t))}</td><td>${esc(cardsTxt(p.c))}</td></tr>`).join('')||'<tr><td colspan="7" class="sub">No player data yet.</td></tr>'}</table></div>
+    <div class="card"><h2>Matches</h2>${t.matches.map(x=>`<div class="li"><span>${esc(x.date)} v ${esc(x.opp)}</span><b>${x.gf}–${x.ga}</b></div>`).join('')}</div>`;}
+  const list=Object.values(T).sort((a,b)=>a.name.localeCompare(b.name));
+  const all=list.flatMap(t=>Object.values(t.players).map(p=>({...p,team:t.name}))).filter(p=>p.g).sort((a,b)=>b.g-a.g).slice(0,10);
+  return `<div class="card"><h2>Teams</h2>${list.map(t=>`<div class="li" onclick="S.teamView='${t.id}';render()" style="cursor:pointer"><b>${esc(t.name)}</b><span class="sub">${t.gp} GP · ${t.w}-${t.d}-${t.l} · ${t.gf}–${t.ga} ›</span></div>`).join('')||'<div class="sub">History builds automatically as matches are played.</div>'}</div>`+
+   (all.length?`<div class="card"><h2>Top scorers</h2><table><tr><th>Player</th><th>Team</th><th>G</th></tr>${all.map(p=>`<tr><td>#${esc(p.num)} ${esc(p.name)}</td><td>${esc(p.team)}</td><td><b>${p.g}</b></td></tr>`).join('')}</table></div>`:'');
+}
+
+/* settings */
+function vSettings(){const s=S.settings,sk=SPORTS[s.sport]?s.sport:'fieldhockey',sp=SPORTS[sk],r=Object.assign({},sp.rules,(s.rules||{})[sk]);
+  return `<div class="card"><h2>This app</h2><label>Organization name (shown in the title bar)</label><input value="${esc(s.org||'')}" placeholder="Scorekeeper" onchange="setS('org',this.value.trim());render()">
+  <label>Default sport for new matches</label><select onchange="setS('sport',this.value);render()">${Object.entries(SPORTS).map(([k,v])=>`<option value="${k}" ${k===sk?'selected':''}>${esc(v.name)}</option>`).join('')}</select>
+  <label>Starters per side (blank = sport default)</label><input type="number" inputmode="numeric" value="${esc(s.starters||'')}" placeholder="${sp.starters||''}" onchange="setS('starters',+this.value||'')">
+  <label>Default shootout / penalty-stroke attempts per team</label><select onchange="setS('soN',+this.value)">${[1,3,5].map(n=>`<option ${(+s.soN||5)===n?'selected':''}>${n}</option>`).join('')}</select></div>
+  <div class="card"><h2>Live sync to tournament site</h2>
+  <p class="sub" style="text-align:left">Optional. Fill in all four fields and every change is pushed to the tournament scoreboard within about a second. Without them, everything stays on this device.</p>
+  <label>Tournament code</label><input value="${esc(s.tournament)}" placeholder="e.g. regionals-2027" onchange="setS('tournament',this.value.trim())">
+  <label>Write PIN (shared with technical officials)</label><input value="${esc(s.pin)}" onchange="setS('pin',this.value.trim())">
+  <label>Supabase project URL</label><input value="${esc(s.sbUrl)}" placeholder="https://xxxx.supabase.co" onchange="setS('sbUrl',this.value.trim())">
+  <label>Supabase anon (public) key</label><input value="${esc(s.sbKey)}" onchange="setS('sbKey',this.value.trim())">
+  <div class="row" style="margin-top:12px"><button class="b" onclick="testSync()">Test connection</button><button class="b ghost" onclick="pullAll()">Pull tournament matches</button></div></div>
+  <div class="card"><h2>Pool standings rules · ${esc(sp.name)}</h2>
+  <div class="row"><div><label>Win pts</label><input id="rw" type="number" step="0.5" value="${r.win}"></div><div><label>Draw pts</label><input id="rd" type="number" step="0.5" value="${r.draw}"></div><div><label>Loss pts</label><input id="rl" type="number" step="0.5" value="${r.loss}"></div></div>
+  <label>Tie-breakers, in order</label><input id="rtb" value="${esc(r.tb.join(', '))}">
+  <div class="sub" style="text-align:left;margin:6px 0">Options: h2h (head-to-head points), gd (goal/run difference), gf (scored), ga (allowed — fewer is better), cards (fewer is better), wins</div>
+  <button class="b" onclick="saveRules()">Save &amp; send to scoreboards</button></div>
+  <div class="card"><h2>Import schedule (CSV)</h2>
+  <p class="sub" style="text-align:left">Columns: date, time, pitch, pool, home, away (optional: game, sport, stage — “pool” or anything else such as crossover/semi/final). A header row is detected. Re-importing updates matches instead of duplicating them. Imported matches appear on the scoreboards as scheduled, and officials tap “Score this” on their phone.</p>
+  <textarea id="sch" placeholder="date,time,pitch,pool,home,away&#10;2027-05-01,09:00,1,Pool A,Hawks,Wolves"></textarea>
+  <label>…or choose a file</label><input type="file" accept=".csv,.txt,.tsv" onchange="readSchFile(this)">
+  <div class="row" style="margin-top:10px"><button class="b" onclick="importSchedule()">Import schedule</button></div></div>
+  <div class="card"><h2>Reliability</h2><div class="chk"><input type="checkbox" ${s.awake===false?'':'checked'} onchange="setS('awake',this.checked);wake()"><div><b>Keep screen awake while scoring</b><div class="sub" style="text-align:left">Stops the phone locking mid-match. Everything is also saved after every tap, so a call, alarm or text never loses data.</div></div></div>
+  <div class="sub" style="text-align:left">Tip: use “Add to Home Screen” so the phone treats this as an app and is less likely to clear its data.</div></div>
+  <div class="card"><h2>Backup</h2><div class="row"><button class="b ghost" onclick="download('scorekeeper-backup.json',JSON.stringify({teams:S.teams,matches:S.matches}),'application/json')">Export all data</button></div>
+  <label>Restore from backup file</label><input type="file" accept=".json" onchange="importBackup(this)">
+  <div class="row" style="margin-top:12px"><button class="b ghost" onclick="ask('Erase ALL local matches, rosters and history on this device?',()=>{S=blank();save();render()},'Erase')">Erase local data</button></div></div>`;
+}
+function setS(k,v){S.settings[k]=v;save();setPill()}
+function importBackup(inp){const f=inp.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);Object.assign(S.teams,d.teams||{});for(const [id,m] of Object.entries(d.matches||{}))if(!S.matches[id]||S.matches[id].updated<m.updated)S.matches[id]=m;save();render();toast('Restored')}catch(e){toast('Not a valid backup')}};r.readAsText(f)}
+
+/* rules + schedule import */
+async function saveRules(){const sk=SPORTS[S.settings.sport]?S.settings.sport:'fieldhockey';
+  const tb=$('#rtb').value.split(/[\s,]+/).filter(Boolean),ok=['h2h','gd','gf','ga','cards','wins'];
+  if(tb.some(x=>!ok.includes(x)))return toast('Tie-breakers: '+ok.join(', '));
+  S.settings.rules=Object.assign({},S.settings.rules,{[sk]:{win:+$('#rw').value,draw:+$('#rd').value,loss:+$('#rl').value,tb}});save();
+  if(!cfg())return toast('Saved on this device (sync not set up)');
+  try{await rpc('set_config',{p_code:S.settings.tournament,p_pin:S.settings.pin,p_config:{rules:S.settings.rules}});toast('Sent to scoreboards ✓')}catch(e){toast('Saved here; could not reach server')}}
+function parseCSV(t){const rows=[],delim=t.includes('\t')&&!t.includes(',')?'\t':',';let row=[],f='',q=false;
+  for(let i=0;i<t.length;i++){const c=t[i];
+    if(q){if(c==='"'){if(t[i+1]==='"'){f+='"';i++}else q=false}else f+=c}
+    else if(c==='"')q=true;else if(c===delim){row.push(f);f=''}
+    else if(c==='\n'||c==='\r'){if(c==='\r'&&t[i+1]==='\n')i++;row.push(f);rows.push(row);row=[];f=''}else f+=c}
+  if(f!==''||row.length){row.push(f);rows.push(row)}
+  return rows.map(r=>r.map(x=>x.trim())).filter(r=>r.some(Boolean))}
+function normDate(v){let r;if(r=v.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/))return r[1]+'-'+r[2].padStart(2,'0')+'-'+r[3].padStart(2,'0');
+  if(r=v.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/))return(r[3].length===2?'20'+r[3]:r[3])+'-'+r[1].padStart(2,'0')+'-'+r[2].padStart(2,'0');return v}
+function normTime(v){const r=v.match(/^(\d{1,2}):(\d{2})\s*([ap]m)?$/i);if(!r)return v;let h=+r[1];const ap=(r[3]||'').toLowerCase();if(ap==='pm'&&h<12)h+=12;if(ap==='am'&&h===12)h=0;return String(h).padStart(2,'0')+':'+r[2]}
+function readSchFile(inp){const f=inp.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{$('#sch').value=r.result};r.readAsText(f)}
+function importSchedule(){
+  const rows=parseCSV($('#sch').value);if(!rows.length)return toast('Paste or choose a schedule first');
+  const head=rows[0].map(x=>x.toLowerCase());let col={date:0,time:1,pitch:2,pool:3,home:4,away:5,game:6,sport:7,stage:-1};
+  if(head.includes('home')){const f=(...n)=>head.findIndex(h=>n.includes(h));
+    col={date:f('date'),time:f('time'),pitch:f('pitch','field','court'),pool:f('pool','group','division'),home:f('home'),away:f('away','visitor','visitors'),game:f('game','game #','#'),sport:f('sport'),stage:f('stage','round','type')};rows.shift()}
+  const g=(r,k)=>col[k]>=0&&col[k]<r.length?r[col[k]]:'';let made=0,upd=0;
+  const sportOf=v=>{v=v.toLowerCase();return Object.keys(SPORTS).find(k=>k===v||SPORTS[k].name.toLowerCase()===v)};
+  for(const r of rows){const home=g(r,'home'),away=g(r,'away');if(!home||!away)continue;
+    const date=normDate(g(r,'date')),time=normTime(g(r,'time')),pitch=g(r,'pitch'),pool=g(r,'pool'),game=g(r,'game'),stage=(!g(r,'stage')||/^pool/i.test(g(r,'stage')))?'pool':'knockout';
+    const id='s-'+hash([date,time,pitch,home,away].join('|').toLowerCase());let m=S.matches[id];
+    if(m){Object.assign(m,{date,time,pitch,pool,game,stage});upd++}
+    else{m=newMatch({id,date,time,pitch,pool,stage,home,away,sport:sportOf(g(r,'sport'))});m.game=game;made++}
+    touch(m)}
+  render();toast(made+' added, '+upd+' updated')}
+
+/* demo */
+function loadDemo(){
+  const mk=(pre,n)=>Array.from({length:n},(_,i)=>({num:String(i+1),name:pre[i%pre.length]+' '+['Adams','Brooks','Chen','Diaz','Evans','Foster','Garcia','Hughes','Ito','Jones','Kim','Lopez','Moore','Nash','Ortiz','Park'][i]}));
+  const A=mk(['Alex','Sam','Jo','Pat'],16),B=mk(['Chris','Dana','Lee','Max'],16);
+  const m=newMatch({sport:'fieldhockey',date:new Date().toISOString().slice(0,10),time:'10:30',pitch:'2',home:'Demo Hawks',away:'Demo Wolves'});
+  [['home',A],['away',B]].forEach(([s,L])=>{m.roster[s]=L.map(p=>({id:mkPid(m.roster[s],p.num,p.name),...p}));m.roster[s].forEach((p,i)=>{p.id=slug(p.name)});m.lineup[s]=m.roster[s].slice(0,11).map(p=>p.id);syncRoster(m,s)});
+  m.umpires=['Umpire One','Umpire Two'];m.tech='Tech Official';m.status='live';m.clock={period:'2',running:true,base:0,startedAt:Date.now()-23*60000};
+  const g=(side,i,min,type)=>{const p=m.roster[side][i];m.goals.push({id:uid(),ts:Date.now()+m.goals.length,side,pid:p.id,num:p.num,name:p.name,min,type,period:'1'})};
+  g('home',6,8,'FG');g('away',9,15,'PC');g('home',6,21,'PS');
+  const p=m.roster.away[3];m.cards.push({id:uid(),ts:Date.now(),side:'away',pid:p.id,num:p.num,name:p.name,min:12,type:'green',who:'player',ump:'Umpire One',note:'',period:'1'});
+  touch(m);openMatch(m.id);S.tab='live';render();
+}
+
+function render(){
+  const on=S.settings.org||'Scorekeeper';$('#org').textContent=on;document.title=on;
+  renderNav();setPill();const a=$('#app');
+  a.innerHTML=S.view==='match'&&cur()?vMatch():S.view==='history'?vHistory():S.view==='settings'?vSettings():vMatches();
+}
+if(S.view==='match'&&!cur())S.view='matches';
+let wl=null;
+async function wake(){try{if(S.settings.awake!==false&&'wakeLock' in navigator&&document.visibilityState==='visible'&&!wl){wl=await navigator.wakeLock.request('screen');wl.addEventListener('release',()=>{wl=null})}}catch(e){}}
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='hidden'){save();return}
+  wake();render();tick();if(cfg()){flush();fetchRemote(true)}});
+addEventListener('pagehide',save);
+try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(e){}
+render();wake();
+if(S.draft&&S.draft.mid===S.currentId&&cur()){dlg=S.draft;S.view='match';S.tab='live';render();dlg.kind==='g'?drawGoal():drawCard()}
+else if(S.draft){S.draft=null;save()}
+if(cfg()){if(dirty.size)flush();fetchRemote(true)}
+</script>
+</body>
+</html>
