@@ -54,6 +54,7 @@ table{width:100%;border-collapse:collapse;font-size:14px}th,td{padding:6px 4px;t
 .chk{display:flex;gap:10px;align-items:flex-start;padding:10px;border:2px solid var(--line);border-radius:10px;margin:6px 0}
 .chk input{width:26px;height:26px;flex:none}
 .warn{background:#fff4d6;border:1px solid #e8c766;border-radius:10px;padding:8px 10px;font-size:13px;margin-bottom:10px}
+.ci{display:inline-block;vertical-align:-3px;margin-right:3px}.ci.rect{width:14px;height:18px;border-radius:3px}.ci.sq{width:16px;height:16px;border-radius:2px}.ci.circ{width:17px;height:17px;border-radius:50%}.ci.tri{width:18px;height:16px;clip-path:polygon(50% 0,100% 100%,0 100%)}
 .ls{width:100%;border-collapse:collapse;font-size:15px}.ls th,.ls td{padding:8px 6px;min-width:30px;text-align:center;border:1px solid var(--line)}
 .ls td:first-child,.ls th:first-child{text-align:left;min-width:80px;position:sticky;left:0;background:#fff}.ls td.cur{background:#fff4d6;outline:2px solid #e8c766}
 .step{display:flex;align-items:center;gap:8px}.step button{width:40px;height:40px;border:0;border-radius:8px;background:#e6ebf1;font-size:20px;font-weight:800;color:var(--navy)}
@@ -75,21 +76,25 @@ const uid=()=>Math.random().toString(36).slice(2,8)+Date.now().toString(36).slic
 const LS='usfhl.v1';
 /* ---------- sport profiles: add a sport by adding an entry here ---------- */
 const CARDS_GYR=[{k:'green',l:'Green',s:'G',c:'#1b8a3a',w:0},{k:'yellow',l:'Yellow',s:'Y',c:'#f2c200',w:1},{k:'red',l:'Red',s:'R',c:'#c8202f',w:3}];
+const CARDS_FH=[{k:'green',l:'Green',s:'G',c:'#1b8a3a',w:0,sh:'tri'},{k:'yellow',l:'Yellow',s:'Y',c:'#f2c200',w:1,sh:'sq'},{k:'red',l:'Red',s:'R',c:'#c8202f',w:3,sh:'circ'}]; // field hockey: green triangle, yellow square, red circle
+const cIcon=(c,sh)=>`<span class="ci ${sh||'rect'}" style="background:${c}"></span>`;
 const HALVES=[['1','1st half'],['2','2nd half'],['OT','Overtime']];
 const SPORTS={
- fieldhockey:{name:'Field hockey',model:'goals',shootout:true,types:[['FG','Field goal'],['PC','Penalty corner'],['PS','Penalty stroke']],assist:false,cards:CARDS_GYR,
+ fieldhockey:{name:'Field hockey',icon:'🏑',model:'goals',shootout:true,types:[['FG','Field goal'],['PC','Penalty corner'],['PS','Penalty stroke']],assist:false,cards:CARDS_FH,
    periods:[['1','Period 1'],['2','Period 2'],['3','Period 3'],['4','Period 4'],['OT','Overtime'],['SO','Shootout']],starters:11,rules:{win:3,draw:1,loss:0,tb:['h2h','gd','gf']}},
- soccer:{name:'Soccer',model:'goals',shootout:true,types:[['OP','Open play'],['PK','Penalty kick'],['FK','Free kick'],['OG','Own goal']],assist:true,cards:[CARDS_GYR[1],CARDS_GYR[2]],
+ soccer:{name:'Soccer',icon:'⚽',model:'goals',shootout:true,types:[['OP','Open play'],['PK','Penalty kick'],['FK','Free kick'],['OG','Own goal']],assist:true,cards:[CARDS_GYR[1],CARDS_GYR[2]],
    periods:[['1','1st half'],['2','2nd half'],['ET1','Extra time 1'],['ET2','Extra time 2'],['PK','Shootout']],starters:11,rules:{win:3,draw:1,loss:0,tb:['h2h','gd','gf','cards']}},
- lacrosse_w:{name:"Lacrosse (women's)",model:'goals',types:[['G','Goal'],['FP','Free position']],assist:true,cards:CARDS_GYR,periods:HALVES,starters:12,rules:{win:1,draw:0,loss:0,tb:['h2h','gd','gf']}},
- lacrosse_m:{name:"Lacrosse (men's)",model:'goals',types:[['EV','Even strength'],['MU','Man-up'],['MD','Man-down']],assist:true,
+ lacrosse_w:{name:"Lacrosse (women's)",icon:'🥍',model:'goals',types:[['G','Goal'],['FP','Free position']],assist:true,cards:CARDS_GYR,periods:HALVES,starters:12,rules:{win:1,draw:0,loss:0,tb:['h2h','gd','gf']}},
+ lacrosse_m:{name:"Lacrosse (men's)",icon:'🥍',model:'goals',types:[['EV','Even strength'],['MU','Man-up'],['MD','Man-down']],assist:true,
    cards:[{k:'t30',l:'Technical 30s',s:'30s',c:'#e08a00',w:0},{k:'p1',l:'Personal 1:00',s:'1:00',c:'#d9534f',w:1},{k:'p2',l:'Personal 2:00',s:'2:00',c:'#c8202f',w:2},{k:'p3',l:'Personal 3:00',s:'3:00',c:'#8b1a24',w:3},{k:'ej',l:'Ejection',s:'EJ',c:'#111',w:5}],
    periods:[['1','Q1'],['2','Q2'],['3','Q3'],['4','Q4'],['OT','Overtime']],starters:10,rules:{win:1,draw:0,loss:0,tb:['h2h','gd','gf']}},
- baseball:{name:'Baseball',model:'linescore',innings:9,rules:{win:1,draw:0.5,loss:0,tb:['h2h','ga','gd']}},
- softball:{name:'Softball',model:'linescore',innings:7,rules:{win:1,draw:0.5,loss:0,tb:['h2h','ga','gd']}}
+ baseball:{name:'Baseball',icon:'⚾',model:'linescore',innings:9,rules:{win:1,draw:0.5,loss:0,tb:['h2h','ga','gd']}},
+ softball:{name:'Softball',icon:'🥎',model:'linescore',innings:7,rules:{win:1,draw:0.5,loss:0,tb:['h2h','ga','gd']}}
 };
 const other=s=>s==='home'?'away':'home';
 const SP=m=>SPORTS[m.sport]||SPORTS.fieldhockey;
+const icon=m=>SP(m).icon||'🏑';
+const umpTxt=m=>{const u=(m.umpires||[]).filter(Boolean);return u.length?'Umpires: '+u.map(esc).join(' · '):''};
 const isLS=m=>m.model==='linescore';
 const ALLCARDS={};Object.values(SPORTS).forEach(x=>(x.cards||[]).forEach(c=>ALLCARDS[c.k]=c));
 const cdef=(m,k)=>(SP(m).cards||[]).find(c=>c.k===k)||ALLCARDS[k]||{k,l:k,s:k,c:'#888',w:0};
@@ -248,11 +253,12 @@ function newMatchModal(){
   <datalist id="tl">${teams}</datalist><datalist id="pl">${pools}</datalist>
   <div class="row"><div><label>Match type</label><select id="nstage"><option value="pool">Pool play</option><option value="knockout">Crossover / knockout</option></select></div><div><label>Pool (for standings)</label><input id="npool" list="pl" placeholder="Pool A"></div></div>
   <label>Home team</label><input id="nh" list="tl" placeholder="Team name"><label>Away team</label><input id="na" list="tl" placeholder="Team name">
+  <div class="row"><div><label>Umpire 1 name</label><input id="nu1"></div><div><label>Umpire 2 name</label><input id="nu2"></div></div>
   <div class="row" style="margin-top:14px"><button class="b ghost" onclick="closeModal()">Cancel</button><button class="b" onclick="createMatch()">Create</button></div>`);
 }
 function createMatch(){
   const m=newMatch({sport:$('#nsp').value,pool:$('#npool').value.trim(),stage:$('#nstage').value,date:$('#nd').value,time:$('#nt').value,pitch:$('#np').value,home:$('#nh').value.trim(),away:$('#na').value.trim()});
-  touch(m);closeModal();S.currentId=m.id;go('match','setup');
+  m.umpires=[$('#nu1').value.trim(),$('#nu2').value.trim()];touch(m);closeModal();S.currentId=m.id;go('match','setup');
 }
 
 function vMatch(){
@@ -277,9 +283,9 @@ function vSetup(m){
    <div class="row"><div><label>Game / round</label><input value="${esc(m.game)}" onchange="setF('game',this.value)"></div>
    <div><label>Match type</label><select onchange="setF('stage',this.value)"><option value="pool" ${m.stage!=='knockout'?'selected':''}>Pool play</option><option value="knockout" ${m.stage==='knockout'?'selected':''}>Crossover / knockout</option></select></div></div>
    ${SP(m).shootout?`<label>Shootout / penalty strokes — attempts per team</label><div class="seg">${[1,3,5].map(n=>`<button class="${(m.soN||5)===n?'on':''}" onclick="setSoN(${n})">${n}</button>`).join('')}</div>`:''}
-   <label>Umpire / official 1</label><input value="${esc(m.umpires[0])}" onchange="setUmp(0,this.value)">
-   <label>Umpire / official 2</label><input value="${esc(m.umpires[1])}" onchange="setUmp(1,this.value)">
-   <label>Technical official / scorer</label><input value="${esc(m.tech)}" onchange="setF('tech',this.value)"></div>`+
+   <label>Umpire 1 name</label><input value="${esc(m.umpires[0])}" onchange="setUmp(0,this.value)">
+   <label>Umpire 2 name</label><input value="${esc(m.umpires[1])}" onchange="setUmp(1,this.value)">
+   <label>Technical official / scorer name</label><input value="${esc(m.tech)}" onchange="setF('tech',this.value)"></div>`+
    (isLS(m)?teamCard('home')+teamCard('away'):roster('home')+roster('away'))+
    `<div class="row"><button class="b big" onclick="go('match','${isLS(m)?'live':'lineup'}')">${isLS(m)?'Next: Live scoring →':'Next: Lineups →'}</button></div>
    <div class="row" style="margin-top:12px"><button class="b ghost" onclick="delMatch()">Delete this match</button></div>`;
@@ -344,6 +350,7 @@ function vLive(m){
    <div class="n">${score(m,'home')}</div><div class="dash">–</div><div class="n">${score(m,'away')}</div></div>
    <div id="clk">${fmtClock(elapsed(m))}</div>
    <div class="sub">${m.pool?esc(m.pool)+' · ':''}${esc(m.date)} ${esc(m.time)} ${m.pitch?'· Pitch '+esc(m.pitch):''} · <span class="badge ${m.status}">${m.status}</span></div>
+   <div class="sub">${umpTxt(m)}</div>
    ${locked?'':`<div class="row" style="margin-top:12px"><button class="b ${m.clock.running?'red':'ok'}" onclick="toggleClock()">${m.clock.running?'Pause clock':'Start clock'}</button>
    <select onchange="setPeriod(this.value)">${sp.periods.map(([v,l])=>`<option ${m.clock.period===v?'selected':''} value="${v}">${esc(l)}</option>`).join('')}</select>
    <button class="b ghost" onclick="clockModal()">Set clock</button></div>`}</div>
@@ -352,8 +359,8 @@ function vLive(m){
   <div class="row" style="margin-bottom:12px"><button class="b big red" onclick="cardModal('home')">Card<br><small>${esc(m.home.name||'Home')}</small></button><button class="b big red" onclick="cardModal('away')">Card<br><small>${esc(m.away.name||'Away')}</small></button></div>`}
   ${vShootout(m,locked)}
   <div class="card"><h2>Match log</h2>${evs.length?evs.map(({k,t:e})=>{const cd=k==='c'?cdef(m,e.type):null;return `<div class="ev"><span class="m">${e.min}'</span>
-   ${k==='g'?`<span>⚽ <b>${esc(e.type)}</b> · ${who(e)}${e.anum?` <span class="sub">(A: #${esc(e.anum)} ${esc(e.aname||'')})</span>`:''} <span class="sub">(${esc(m[e.side].name||e.side)})</span></span>`
-   :`<span><span class="dot" style="background:${cd.c}"></span> <b>${esc(cd.l)}</b> · ${e.who==='official'?'Team official':who(e)} <span class="sub">(${esc(m[e.side].name||e.side)}${e.ump?' · by '+esc(e.ump):''}${e.note?' · '+esc(e.note):''})</span></span>`}
+   ${k==='g'?`<span>${icon(m)} <b>${esc(e.type)}</b> · ${who(e)}${e.anum?` <span class="sub">(A: #${esc(e.anum)} ${esc(e.aname||'')})</span>`:''} <span class="sub">(${esc(m[e.side].name||e.side)})</span></span>`
+   :`<span>${cIcon(cd.c,cd.sh)} <b>${esc(cd.l)}</b> · ${e.who==='official'?'Team official':who(e)} <span class="sub">(${esc(m[e.side].name||e.side)}${e.ump?' · by '+esc(e.ump):''}${e.note?' · '+esc(e.note):''})</span></span>`}
    ${locked?'':`<button class="x" onclick="editEv('${k}','${e.id}')">✎</button><button class="x" onclick="delEv('${k}','${e.id}')">✕</button>`}</div>`}).join(''):'<div class="sub">No goals or cards yet.</div>'}</div>`;
 }
 /* shootout UI */
@@ -396,7 +403,7 @@ function vLiveLS(m){
     &nbsp;E <button onclick="lsHE('${s}','e',-1)">−</button><b>${m.he[s].e}</b><button onclick="lsHE('${s}','e',1)">+</button></span></div>`;
   return `<div class="card"><div class="score"><div class="t">${esc(m.home.name||'Home')}</div><div></div><div class="t">${esc(m.away.name||'Away')}</div>
    <div class="n">${score(m,'home')}</div><div class="dash">–</div><div class="n">${score(m,'away')}</div></div>
-   <div class="sub" style="margin:8px 0">${m.pool?esc(m.pool)+' · ':''}${esc(m.date)} ${esc(m.time)} ${m.pitch?'· Field '+esc(m.pitch):''} · <span class="badge ${m.status}">${m.status}</span></div>
+   <div class="sub" style="margin:8px 0">${m.pool?esc(m.pool)+' · ':''}${esc(m.date)} ${esc(m.time)} ${m.pitch?'· Field '+esc(m.pitch):''} · <span class="badge ${m.status}">${m.status}</span><br>${umpTxt(m)}</div>
    <div style="overflow-x:auto"><table class="ls"><tr><th></th>${Array.from({length:n},(_,i)=>`<th>${i+1}</th>`).join('')}<th>R</th><th>H</th><th>E</th></tr>${row('away')}${row('home')}</table></div></div>`+
   (locked?`<div class="warn">This game is final. Reopen it from Sign-off to make changes.</div>`:`
    <div class="card"><h2>${inn.half==='top'?'Top':'Bottom'} ${inn.n} · ${esc(m[bat].name||bat)} batting</h2>
@@ -460,7 +467,7 @@ function cardModal(side,id){const m=cur(),c=id?m.cards.find(x=>x.id===id):null,c
   dlg={kind:'c',id,side:c?c.side:side,pid:c?c.pid:null,num:c?c.num:'',who:c?c.who:'player',type:c?c.type:(cs.find(x=>x.k==='yellow')||cs[0]).k,min:c?c.min:minuteNow(m),ump:c?c.ump:'',note:c?c.note:''};drawCard()}
 function drawCard(){const m=cur();saveDraft();const ups=m.umpires.filter(Boolean),cs=SP(m).cards;
   openModal(`<h2>${cs.length>3?'Penalty':'Card'} · ${esc(m[dlg.side].name||dlg.side)}</h2>
-  <div class="seg">${cs.map(d=>`<button style="${dlg.type===d.k?`background:${d.c};color:${d.k==='yellow'?'#000':'#fff'}`:''}" onclick="dlg.type='${d.k}';dlg.min=+$('#cmin').value||dlg.min;drawCard()">${esc(d.l)}</button>`).join('')}</div>
+  <div class="seg">${cs.map(d=>`<button class="${dlg.type===d.k?'on':''}" onclick="dlg.type='${d.k}';dlg.min=+$('#cmin').value||dlg.min;drawCard()">${cIcon(d.c,d.sh)} ${esc(d.l)}</button>`).join('')}</div>
   <label>Minute</label><input id="cmin" type="number" inputmode="numeric" value="${dlg.min}" oninput="dlg.min=+this.value;saveDraft()">
   <label>Awarded by</label><div class="chips">${(ups.length?ups:['Umpire 1','Umpire 2']).map((u,i)=>`<button class="chip ${dlg.ump===u?'on':''}" onclick="pickUmp(${i})">${esc(u)}</button>`).join('')}</div>
   <label>Issued to</label><div class="seg"><button class="${dlg.who==='player'?'on':''}" onclick="dlg.who='player';drawCard()">Player</button><button class="${dlg.who==='official'?'on':''}" onclick="dlg.who='official';drawCard()">Team official</button></div>
@@ -473,7 +480,7 @@ function saveCard(){const m=cur();dlg.min=+$('#cmin').value||dlg.min;dlg.note=$(
   const r=dlg.who==='player'?resolve(m,dlg.side,dlg.pid,dlg.num):{pid:null,num:'',name:''};
   if(dlg.who==='player'&&!r.num)return toast('Pick the player’s number');
   const d=cdef(m,dlg.type);
-  const o={side:dlg.side,min:dlg.min,type:dlg.type,who:dlg.who,ump:dlg.ump,note:dlg.note,period:m.clock.period,col:d.c,lbl:d.l,w:d.w,...r};
+  const o={side:dlg.side,min:dlg.min,type:dlg.type,who:dlg.who,ump:dlg.ump,note:dlg.note,period:m.clock.period,col:d.c,lbl:d.l,w:d.w,shp:d.sh||'',...r};
   if(dlg.id)Object.assign(m.cards.find(x=>x.id===dlg.id),o);else m.cards.push({id:uid(),ts:Date.now(),...o});
   touch(m);closeModal();render()}
 function editEv(k,id){k==='g'?goalModal(null,id):cardModal(null,id)}
@@ -486,7 +493,8 @@ function vSign(m){
    <div class="chk"><input type="checkbox" ${so[s].ok?'checked':''} onchange="setSO('${s}','ok',this.checked)"><div><b>Scorecard is correct</b><div class="sub" style="text-align:left">Goals, cards and final score reviewed.</div></div></div>
    <div class="row"><div><label>Initials</label><input maxlength="5" value="${esc(so[s].initials)}" onchange="setSO('${s}','initials',this.value.toUpperCase())"></div><div style="flex:2"><label>Manager name</label><input value="${esc(so[s].manager)}" onchange="setSO('${s}','manager',this.value)"></div></div>
    <div class="chk"><input type="checkbox" ${so[s].protest?'checked':''} onchange="setSO('${s}','protest',this.checked)"><div><b>Signed under protest</b></div></div></div>`;
-  return `<div class="card"><h2>Final score</h2><div class="score"><div class="t">${esc(m.home.name)}</div><div></div><div class="t">${esc(m.away.name)}</div><div class="n">${score(m,'home')}</div><div class="dash">–</div><div class="n">${score(m,'away')}</div></div>
+  return `<div class="card"><h2>Match info</h2><div class="sub" style="text-align:left;color:#111;font-size:15px">${esc(m.home.name)} v ${esc(m.away.name)}<br>${m.pool?esc(m.pool)+' · ':''}${esc(m.date)} ${esc(m.time)} ${m.pitch?'· Pitch '+esc(m.pitch):''}<br>${umpTxt(m)||'Umpires: <i>add names in Setup</i>'}${m.tech?'<br>Technical official: '+esc(m.tech):''}</div></div>
+   <div class="card"><h2>Final score</h2><div class="score"><div class="t">${esc(m.home.name)}</div><div></div><div class="t">${esc(m.away.name)}</div><div class="n">${score(m,'home')}</div><div class="dash">–</div><div class="n">${score(m,'away')}</div></div>
    <div class="sub" style="margin-top:6px">${isLS(m)?'Review the line score in the Live tab.':`${m.goals.length} goal${m.goals.length===1?'':'s'} · ${m.cards.length} card${m.cards.length===1?'':'s'} — review in the Live tab log.`}${m.soRes?` Shootout ${m.soRes.h}–${m.soRes.a}${m.soRes.done?' ('+esc(m[m.soRes.winner].name)+' win)':' (not finished)'}.`:''}</div></div>`+side('home')+side('away')+
    `<div class="card"><label>Protest notes (optional)</label><textarea onchange="setSOnote(this.value)">${esc(so.protestNote)}</textarea></div>`+
    (final?`<button class="b big ok" style="width:100%;margin-bottom:8px" disabled>Match is FINAL</button><button class="b ghost" style="width:100%" onclick="reopen()">Reopen match</button>`

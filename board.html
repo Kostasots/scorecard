@@ -27,7 +27,7 @@ body.embed header{display:none}
 .sc{display:grid;grid-template-columns:1fr auto 1fr;gap:6px;text-align:center;align-items:center}
 .sc .t{font-weight:800}.sc .n{font-size:48px;font-weight:800;line-height:1}.sc .d{color:var(--mut);font-size:26px}
 .ev{display:flex;gap:8px;padding:5px 0;border-top:1px solid var(--line);font-size:14px}.ev:first-of-type{margin-top:8px}
-.ev b{width:34px}.dot{display:inline-block;width:11px;height:15px;border-radius:2px;vertical-align:-3px}
+.ev b{width:34px}.ci{display:inline-block;vertical-align:-3px;margin-right:2px}.ci.rect{width:11px;height:15px;border-radius:2px}.ci.sq{width:14px;height:14px;border-radius:2px}.ci.circ{width:15px;height:15px;border-radius:50%}.ci.tri{width:16px;height:14px;clip-path:polygon(50% 0,100% 100%,0 100%)}
 .pr{margin-top:8px;font-size:12px;font-weight:700;color:var(--red)}
 .tile{padding:8px 10px}.tile summary{list-style:none;cursor:pointer}.tile summary::-webkit-details-marker{display:none}
 .tl{display:grid;grid-template-columns:1fr auto 1fr;gap:6px;align-items:center}.tn{font-weight:700;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.tn.r{text-align:right}.ts{font-size:26px;font-weight:800}
@@ -61,6 +61,7 @@ const G3={win:3,draw:1,loss:0,tb:['h2h','gd','gf']},W1={win:1,draw:0,loss:0,tb:[
 const DEF={fieldhockey:G3,soccer:{...G3,tb:['h2h','gd','gf','cards']},lacrosse_w:W1,lacrosse_m:W1,baseball:BB,softball:BB};
 let CONF={},matches=[],filter='all',pitch=q.get('pitch')||'',view=q.get('view')==='standings'?'standings':'scores',layout=q.get('layout')||'',poolF=q.get('pool')||'';
 let since=null,store=new Map(),polls=0,openSet=new Set(),title=q.get('title')||CONFIG.title||'';
+const ICON={fieldhockey:'🏑',soccer:'⚽',lacrosse_w:'🥍',lacrosse_m:'🥍',baseball:'⚾',softball:'🥎'};
 const isLS=m=>m.model==='linescore';
 const score=(m,s)=>isLS(m)?(m.ls[s]||[]).reduce((a,b)=>a+(+b||0),0):(m.goals||[]).filter(g=>g.side===s).length;
 const mins=m=>Math.floor((m.clock.base+(m.clock.running?(Date.now()-m.clock.startedAt)/1000:0))/60)+1;
@@ -88,6 +89,7 @@ async function load(){
 function tg(id,o){o?openSet.add(id):openSet.delete(id)}
 
 /* ---------- scores ---------- */
+const cshape=(m,e)=>e.shp||((!m.sport||m.sport==='fieldhockey')?({green:'tri',yellow:'sq',red:'circ'}[e.type]||''):'');
 function evHTML(m){
   if(isLS(m)){
     const n=Math.max(m.innings||7,m.ls.home.length,m.ls.away.length);
@@ -96,8 +98,8 @@ function evHTML(m){
   }
   return [...(m.goals||[]).map(g=>({k:'g',e:g})),...(m.cards||[]).map(c=>({k:'c',e:c}))].sort((a,b)=>a.e.min-b.e.min||a.e.ts-b.e.ts).map(({k,e})=>{
     const nm=e.num?'#'+esc(e.num)+' '+esc(e.name):'';const tm=`<span style="color:var(--mut)">${esc(m[e.side].name)}</span>`;
-    return k==='g'?`<div class="ev"><b>${e.min}'</b><span>⚽ ${esc(e.type)} · ${nm}${e.anum?` <span style="color:var(--mut)">(A: #${esc(e.anum)} ${esc(e.aname||'')})</span>`:''} ${tm}</span></div>`
-     :`<div class="ev"><b>${e.min}'</b><span><span class="dot" style="background:${esc(e.col||CARD[e.type]||'#888')}"></span> ${e.lbl&&!CARD[e.type]?'<b style="width:auto">'+esc(e.lbl)+'</b> · ':''}${e.who==='official'?'Team official':nm} ${tm}</span></div>`}).join('');
+    return k==='g'?`<div class="ev"><b>${e.min}'</b><span>${ICON[m.sport]||'🏑'} ${esc(e.type)} · ${nm}${e.anum?` <span style="color:var(--mut)">(A: #${esc(e.anum)} ${esc(e.aname||'')})</span>`:''} ${tm}</span></div>`
+     :`<div class="ev"><b>${e.min}'</b><span><span class="ci ${esc(cshape(m,e)||'rect')}" style="background:${esc(e.col||CARD[e.type]||'#888')}"></span> ${e.lbl&&!CARD[e.type]?'<b style="width:auto">'+esc(e.lbl)+'</b> · ':''}${e.who==='official'?'Team official':nm} ${tm}</span></div>`}).join('');
 }
 function status(m){return m.status==='live'?(isLS(m)?`${m.inn.half==='top'?'Top':'Bot'} ${m.inn.n} `:(m.clock.running?mins(m)+"' ":'Paused '))+'':''}
 const soLine=m=>m.soRes?`<div style="font-size:13px;font-weight:700;color:var(--navy);text-align:center;margin-top:4px">Shootout ${m.soRes.h}–${m.soRes.a}${m.soRes.done?' · '+esc(m[m.soRes.winner].name)+' win':' · in progress'}</div>`:'';
